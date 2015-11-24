@@ -1,0 +1,6 @@
+[package]
+name = "pbook-gui"
+version = "0.1.0"
+authors = ["honorabrutroll <edward.yang6771@gmail.com>"]
+
+[dependencies]
