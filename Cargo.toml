@@ -4,3 +4,5 @@ version = "0.1.0"
 authors = ["honorabrutroll <edward.yang6771@gmail.com>"]
 
 [dependencies]
+hyper = "0.6.16"
+kiss-ui = {git = "https://github.com/cybergeek94/kiss-ui"}
