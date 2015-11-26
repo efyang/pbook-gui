@@ -1,0 +1,3 @@
+[submodule "free-programming-books"]
+	path = free-programming-books
+	url = https://github.com/vhf/free-programming-books
