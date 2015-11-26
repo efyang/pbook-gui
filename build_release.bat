@@ -1,4 +1,4 @@
-cargo rustc --release -v -- "-Clink-args=-mwindows"
+cargo rustc --release -- "-Clink-args=-mwindows"
 cd "target/release"
 del /Q "pbook-gui.zip"
 mkdir "pbook-gui"
