@@ -19,3 +19,5 @@
 	* max 4 parallel downloads/maximum os threads -> whichever is smaller
 	* threadpool is Hashmap<thread, bool> (bool is whether working or not)
 	* Check for open threads on each gui update loop
+
+* NOTE: Included windows deps are only x64
