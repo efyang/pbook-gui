@@ -1,9 +1,12 @@
 use std::env;
 use std::fs::copy;
+use std::path::Path;
 
 fn main() {
+    let fsep;
+    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     if cfg!(windows) {
-        let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+        fsep = "\\";
         let outdir = env::var("OUT_DIR").unwrap();
         let depdir; 
         if cfg!(target_pointer_width = "64") {
@@ -17,5 +20,9 @@ fn main() {
         println!("{}", outdir);
         copy(format!("{}{}", manifest_dir, "\\windows-deps\\pbook-gui.exe.manifest"), format!("{}{}", outdir, "\\..\\..\\..\\pbook-gui.exe.manifest")).expect("Failed to copy manifest");
         copy(format!("{}{}", depdir, "\\iup.dll"), format!("{}{}", outdir, "\\..\\..\\..\\iup.dll")).expect("Failed to copy iup.dll");
+    } else {
+        fsep = "/";
     }
+    
+    let pbook_raw = format!("{root}{s}free-programming-books{s}free-programming-books.md", root = manifest_dir, s = fsep);
 }
