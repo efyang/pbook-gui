@@ -7,7 +7,7 @@ use kiss_ui::dialog::Dialog;
 use kiss_ui::text::Label;
 
 mod download;
-mod data;
+mod include;
 mod gui;
 mod parse;
 

@@ -1,6 +1,8 @@
 use std::env;
 use std::fs::copy;
-use std::path::Path;
+//use std::path::Path;
+use std::io::prelude::*;
+use std::fs::File;
 
 fn main() {
     let fsep;
@@ -18,11 +20,19 @@ fn main() {
         }
         println!("cargo:rustc-link-search={}", depdir);
         println!("{}", outdir);
-        copy(format!("{}{}", manifest_dir, "\\windows-deps\\pbook-gui.exe.manifest"), format!("{}{}", outdir, "\\..\\..\\..\\pbook-gui.exe.manifest")).expect("Failed to copy manifest");
-        copy(format!("{}{}", depdir, "\\iup.dll"), format!("{}{}", outdir, "\\..\\..\\..\\iup.dll")).expect("Failed to copy iup.dll");
+        copy(format!("{}{}", manifest_dir, "\\windows-deps\\pbook-gui.exe.manifest"),
+             format!("{}{}", outdir, "\\..\\..\\..\\pbook-gui.exe.manifest"))
+            .expect("Failed to copy manifest");
+        copy(format!("{}{}", depdir, "\\iup.dll"),
+             format!("{}{}", outdir, "\\..\\..\\..\\iup.dll"))
+            .expect("Failed to copy iup.dll");
     } else {
         fsep = "/";
     }
-    
-    let pbook_raw = format!("{root}{s}free-programming-books{s}free-programming-books.md", root = manifest_dir, s = fsep);
+        //store pbooks.md file to include.rs
+        let src_dir = format!("{}{}{}", manifest_dir, fsep, "src");
+        let mut include_file = File::create(format!("{}{}{}", src_dir, fsep, "include.rs")).expect("Failed to create \"include.rs\" file");
+        let pbook_data_path = format!("{}{}{}{}{}", manifest_dir, fsep, "free-programming-books", fsep, "free-programming-books.md");
+        let include_str = format!("pub const RAW_DATA: &'static str = include_str!(\"{}\");", pbook_data_path);
+        include_file.write_all(include_str.as_bytes()).expect("Failed to write include_str to include.rs");
 }
