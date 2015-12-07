@@ -11,6 +11,8 @@ mod include;
 mod gui;
 mod parse;
 
+use include::RAW_DATA;
+
 use std::env;
 
 fn main() {
@@ -21,6 +23,10 @@ fn main() {
                                   exe_path.display()),
         Err(e) => println!("failed to get current exe path: {}", e),
     };
+    
+    for s in parse::parse(RAW_DATA) {
+        println!("{:?}", s);
+    }
 
     kiss_ui::show_gui(|| {
         Dialog::new(
