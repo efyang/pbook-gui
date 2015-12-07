@@ -8,6 +8,11 @@ fn main() {
     // update git submodule
     Command::new("git")
         .arg("submodule")
+        .arg("init")
+        .output()
+        .unwrap_or_else(|e| panic!("failed to execute process: {}", e));
+    Command::new("git")
+        .arg("submodule")
         .arg("update")
         .output()
         .unwrap_or_else(|e| panic!("failed to execute process: {}", e));
