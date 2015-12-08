@@ -1,1 +1,0 @@
-pub const RAW_DATA: &'static str = include_str!("/home/edward-yang/gitproj/pbook-gui/free-programming-books/free-programming-books.md");
