@@ -1,1 +1,1 @@
-use kiss_ui::prelude::*;
+use gtk::traits::*;

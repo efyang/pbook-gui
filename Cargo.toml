@@ -6,4 +6,5 @@ build = "build.rs"
 
 [dependencies]
 hyper = "0.6.16"
-kiss-ui = {git = "https://github.com/cybergeek94/kiss-ui"}
+gtk = "*"
+glib = "*"

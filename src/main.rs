@@ -1,10 +1,6 @@
 extern crate hyper;
 #[macro_use]
-extern crate kiss_ui;
-
-use kiss_ui::container::Horizontal;
-use kiss_ui::dialog::Dialog;
-use kiss_ui::text::Label;
+extern crate gtk;
 
 mod download;
 mod include;
@@ -13,6 +9,8 @@ mod parse;
 
 use include::RAW_DATA;
 
+use gtk::traits::*;
+use gtk::signal::Inhibit;
 use std::env;
 
 fn main() {
@@ -27,16 +25,27 @@ fn main() {
     for s in parse::parse(RAW_DATA) {
         println!("{:?}", s);
     }
+    if gtk::init().is_err() {
+        println!("Failed to initialize GTK.");
+        return;
+    }
 
-    kiss_ui::show_gui(|| {
-        Dialog::new(
-            Horizontal::new(
-                children![
-                    Label::new("Hello, world!"),
-                ]
-            )
-        )
-        .set_title("Hello, world!")
-        .set_size_pixels(640, 480)
+    let window = gtk::Window::new(gtk::WindowType::Toplevel).unwrap();
+
+    window.set_title("First GTK+ Program");
+    window.set_border_width(10);
+    window.set_window_position(gtk::WindowPosition::Center);
+    window.set_default_size(350, 70);
+
+    window.connect_delete_event(|_, _| {
+        gtk::main_quit();
+        Inhibit(false)
     });
+
+    let button = gtk::Button::new_with_label("Click me!").unwrap();
+
+    window.add(&button);
+
+    window.show_all();
+    gtk::main();
 }
