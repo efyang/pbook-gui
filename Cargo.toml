@@ -2,7 +2,7 @@
 name = "pbook-gui"
 version = "0.1.0"
 authors = ["honorabrutroll <edward.yang6771@gmail.com>"]
-build = "build.rs"
+#build = "build.rs"
 
 [dependencies]
 hyper = "0.6.16"

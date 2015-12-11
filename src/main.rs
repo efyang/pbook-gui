@@ -1,3 +1,4 @@
+#![allow(dead_code, unused_imports, unused_attributes)]
 extern crate hyper;
 #[macro_use]
 extern crate gtk;
@@ -14,17 +15,22 @@ use gtk::signal::Inhibit;
 use std::env;
 
 fn main() {
-    println!("Hello, world!");
-
     match env::current_exe() {
-        Ok(exe_path) => println!("Path of this executable is: {}",
-                                  exe_path.display()),
+        Ok(exe_path) => println!("Path of this executable is: {}", exe_path.display()),
         Err(e) => println!("failed to get current exe path: {}", e),
     };
-    
+
     for s in parse::parse(RAW_DATA) {
-        println!("{:?}", s);
+        // println!("{:?}", s);
+        match parse::get_item_info(s) {
+            Some(info) => {
+                let dl = download::Download::new(info.0, info.1);
+                println!("{:?}", dl);
+            }
+            None => {}
+        }
     }
+    // start gtk
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
         return;

@@ -1,6 +1,7 @@
 use hyper::client::*;
 use hyper::header::ContentLength;
 use std::time::Duration;
+use std::hash::{Hash, Hasher, SipHasher};
 
 // #[cfg(unix)]
 // const FILE_SEP: &'static str = "/";
@@ -8,37 +9,78 @@ use std::time::Duration;
 // #[cfg(windows)]
 // const FILE_SEP: &'static str = "\\";
 
-pub struct Download {
-    pub title: String,
-    pub url: String,
-    pub enabled: bool,
-    dlinfo: Option<DownloadInfo>, /* optional depending on whether
-                                   * its currently being downloaded */
+#[derive(Debug, Clone)]
+pub struct Category {
+    name: String,
+    downloads: Vec<Download>,
 }
 
-impl Download {
-    fn new(title: String, url: String) -> Download {
-        Download {
-            title: title,
-            url: url,
-            enabled: false,
-            dlinfo: None,
+impl Category {
+    pub fn new(name: String, downloads: Vec<Download>) -> Category {
+        Category {
+            name: name,
+            downloads: downloads,
         }
     }
 
-    fn is_downloading(&self) -> bool {
+    pub fn set_enable_state_all(&mut self, enable_state: bool) {
+        for dl in self.downloads.iter_mut() {
+            dl.enabled = enable_state;
+        }
+    }
+
+    pub fn begin_download(&mut self, download_id: &u64) {
+        for dl in self.downloads.iter_mut() {
+            if &dl.id == download_id {
+                dl.start_download();
+                break;
+            }
+        }
+    }
+}
+
+pub fn get_dl_id(name: String, url: String) -> u64 {
+    let mut hasher = SipHasher::new();
+    format!("{}{}", name, url).hash(&mut hasher);
+    hasher.finish()
+}
+
+#[derive(Debug, Clone)]
+pub struct Download {
+    name: String,
+    url: String,
+    enabled: bool,
+    dlinfo: Option<DownloadInfo>, /* optional depending on whether
+                                   * its currently being downloaded */
+    id: u64,
+}
+
+impl Download {
+    pub fn new(name: String, url: String) -> Download {
+        // id is siphash of name + url
+        Download {
+            name: name.clone(),
+            url: url.clone(),
+            enabled: false,
+            dlinfo: None,
+            id: get_dl_id(name, url),
+        }
+    }
+
+    pub fn is_downloading(&self) -> bool {
         self.dlinfo.is_some()
     }
 
-    fn enable(&mut self) {
+    pub fn enable(&mut self) {
         self.enabled = true;
     }
 
-    fn start_download(&mut self) {
+    pub fn start_download(&mut self) {
         self.dlinfo = Some(DownloadInfo::new());
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct DownloadInfo {
     progress: usize,
     total: usize,
@@ -46,7 +88,7 @@ pub struct DownloadInfo {
 }
 
 impl DownloadInfo {
-    fn new() -> DownloadInfo {
+    pub fn new() -> DownloadInfo {
         DownloadInfo {
             progress: 0,
             total: 0,
@@ -54,7 +96,7 @@ impl DownloadInfo {
         }
     }
 
-    fn with_total(total: usize) -> DownloadInfo {
+    pub fn with_total(total: usize) -> DownloadInfo {
         DownloadInfo {
             progress: 0,
             total: total,
