@@ -23,6 +23,14 @@ impl Category {
         }
     }
 
+    pub fn get_name(&self) -> &String {
+        &self.name
+    }
+
+    pub fn add_download(&mut self, download: Download) {
+        self.downloads.push(download);
+    }
+
     pub fn set_enable_state_all(&mut self, enable_state: bool) {
         for dl in self.downloads.iter_mut() {
             dl.enabled = enable_state;

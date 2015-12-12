@@ -10,9 +10,8 @@ mod parse;
 
 use include::RAW_DATA;
 
-use gtk::traits::*;
-use gtk::signal::Inhibit;
 use std::env;
+use parse::*;
 
 fn main() {
     match env::current_exe() {
@@ -20,38 +19,8 @@ fn main() {
         Err(e) => println!("failed to get current exe path: {}", e),
     };
 
-    for s in parse::parse(RAW_DATA) {
-        // println!("{:?}", s);
-        match parse::get_item_info(s) {
-            Some(info) => {
-                let dl = download::Download::new(info.0, info.1);
-                println!("{:?}", dl);
-            }
-            None => {}
-        }
-    }
-    // start gtk
-    if gtk::init().is_err() {
-        println!("Failed to initialize GTK.");
-        return;
-    }
+    let parsed = parse(RAW_DATA);
 
-    let window = gtk::Window::new(gtk::WindowType::Toplevel).unwrap();
-
-    window.set_title("First GTK+ Program");
-    window.set_border_width(10);
-    window.set_window_position(gtk::WindowPosition::Center);
-    window.set_default_size(350, 70);
-
-    window.connect_delete_event(|_, _| {
-        gtk::main_quit();
-        Inhibit(false)
-    });
-
-    let button = gtk::Button::new_with_label("Click me!").unwrap();
-
-    window.add(&button);
-
-    window.show_all();
-    gtk::main();
+    // start gtk gui
+    gui::gui(parsed);
 }
