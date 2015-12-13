@@ -8,3 +8,5 @@ authors = ["honorabrutroll <edward.yang6771@gmail.com>"]
 hyper = "0.6.16"
 gtk = "*"
 glib = "*"
+threadpool = "0.1"
+num_cpus = "0.2"
