@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_imports, unused_attributes)]
 extern crate hyper;
 extern crate gtk;
+extern crate gdk;
 extern crate threadpool;
 extern crate num_cpus;
 

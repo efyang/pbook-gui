@@ -1,12 +1,34 @@
 use download::*;
 use gtk;
+use gdk;
 use gtk::traits::*;
 use gtk::signal::Inhibit;
+use gtk::{CssProvider, StyleContext, STYLE_PROVIDER_PRIORITY_APPLICATION};
+use gdk::screen::Screen;
+use std::path::Path;
+
+const DEFAULT_GTK_CSS_CONFIG: &'static str = "gtk.css";
 
 pub fn gui(data: Vec<Category>) {
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
         return;
+    }
+    // check if gtk css config exists, if so use it
+    if Path::new(DEFAULT_GTK_CSS_CONFIG).exists() {
+        if let Ok(style_provider) = CssProvider::load_from_path(DEFAULT_GTK_CSS_CONFIG) {
+            if let Some(screen) = Screen::get_default() {
+                StyleContext::add_provider_for_screen(&screen,
+                                                      &style_provider,
+                                                      STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+            } else {
+                no_css_error();
+            }
+        } else {
+            no_css_error();
+        }
+    } else {
+        no_css_error();
     }
 
     let window = gtk::Window::new(gtk::WindowType::Toplevel).unwrap();
@@ -43,4 +65,8 @@ pub fn gui(data: Vec<Category>) {
     window.show_all();
     gtk::main();
 
+}
+
+fn no_css_error() {
+    println!("No valid GTK CSS config or gdk screen found, using gtk defaults.");
 }
