@@ -11,3 +11,11 @@ glib = "*"
 gdk = "*"
 threadpool = "0.1"
 num_cpus = "0.2"
+
+[[bin]]
+name = "pbook-launcher"
+path = "src/launcher.rs"
+
+[[bin]]
+name = "pbook-gui"
+path = "src/main.rs"
