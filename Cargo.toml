@@ -2,7 +2,7 @@
 name = "pbook-gui"
 version = "0.1.0"
 authors = ["honorabrutroll <edward.yang6771@gmail.com>"]
-#build = "build.rs"
+build = "build.rs"
 
 [dependencies]
 hyper = "0.6.16"
@@ -12,10 +12,5 @@ gdk = "*"
 threadpool = "0.1"
 num_cpus = "0.2"
 
-[[bin]]
-name = "pbook-launcher"
-path = "src/launcher.rs"
-
-[[bin]]
-name = "pbook-gui"
-path = "src/main.rs"
+[build-dependencies]
+hyper = "*"
