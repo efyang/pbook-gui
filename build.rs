@@ -212,6 +212,7 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
                 themes.push("arc-dark");
             }
             if cfg!(feature = "arc-solid") {
+                tmp_theme = "arc-solid";
                 themes.push("arc-solid");
             }
             if cfg!(feature = "arc-darker-solid") {
