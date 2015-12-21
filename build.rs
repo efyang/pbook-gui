@@ -3,7 +3,7 @@ extern crate hyper;
 use std::io::prelude::*;
 use std::io::BufWriter;
 use std::io;
-use std::fs::{create_dir_all, File, copy, read_dir, remove_file};
+use std::fs::{create_dir_all, File, copy, read_dir, remove_file, remove_dir_all};
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -111,6 +111,9 @@ pub fn main() {
         let main_path = out_dir_path.join("pbook-gui.exe");
         copy(gtk_css_path.clone(), out_dir_path.join("gtk.css")).expect("Failed to copy gtk.css");
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
+
+        add_themes(&Path::new(&manifest_dir), &out_dir_path, &dist_dir);
+
         if launcher_path.exists() && main_path.exists() {
             copy(launcher_path, dist_dir.join("pbook-launcher.exe"))
                 .expect("Failed to copy launcher");
@@ -137,6 +140,9 @@ pub fn main() {
         let main_path = out_dir_path.join("pbook-gui");
         copy(gtk_css_path.clone(), out_dir_path.join("gtk.css")).expect("Failed to copy gtk.css");
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
+
+        add_themes(&Path::new(&manifest_dir), &out_dir_path, &dist_dir);
+
         if launcher_path.exists() && main_path.exists() {
             copy(launcher_path, dist_dir.join("pbook-launcher")).expect("Failed to copy launcher");
             copy(main_path, bin_dir.join("pbook-gui")).expect("Failed to copy main executable");
@@ -155,15 +161,101 @@ pub fn main() {
     }
 }
 
-fn css_comment(line: &str) -> String {
-    format!("/* {} */", line)
+fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
+    delete_if_exists(&out_dir.join("themes"));
+    delete_if_exists(&dist_dir.join("themes"));
+    if cfg!(feature = "all-themes") || cfg!(feature = "arc") || cfg!(feature = "arc-darker") ||
+       cfg!(feature = "arc-dark") ||
+       cfg!(feature = "iris-light") || cfg!(feature = "iris-dark") {
+        // theme should be active -> add it in to gtk.css in dist instances
+        let theme_dir = out_dir.join("themes");
+        create_dir_all(theme_dir.clone()).expect("Failed to create theme dir");
+        let theme_file = out_dir.join("theme.txt");
+        let mut theme_file_handle = File::create(theme_file).expect("Failed to create theme.txt");
+        let theme;
+        if cfg!(feature = "all-themes") {
+            // copy all themes
+            // theme should be active -> write it to theme.txt
+            if cfg!(feature = "set-arc-darker") {
+                theme = "arc-darker";
+            } else if cfg!(feature = "set-arc-dark") {
+                theme = "arc-dark";
+            } else if cfg!(feature = "set-iris-light") {
+                theme = "iris-light";
+            } else if cfg!(feature = "set-iris-dark") {
+                theme = "iris-dark";
+            } else {
+                theme = "arc";
+            }
+            copy_themes(manifest_dir,
+                        &theme_dir,
+                        &vec!["arc", "arc-darker", "arc-dark", "iris-light", "iris-dark"]);
+        } else {
+            let mut themes = Vec::new();
+            let mut tmp_theme = "arc";
+            if cfg!(feature = "arc") {
+                tmp_theme = "arc";
+                themes.push("arc");
+            }
+            if cfg!(feature = "arc-darker") {
+                tmp_theme = "arc-darker";
+                themes.push("arc-darker");
+            }
+            if cfg!(feature = "arc-dark") {
+                tmp_theme = "arc-dark";
+                themes.push("arc-dark");
+            }
+            if cfg!(feature = "iris-light") {
+                tmp_theme = "iris-light";
+                themes.push("iris-light");
+            }
+            if cfg!(feature = "iris-dark") {
+                tmp_theme = "iris-dark";
+                themes.push("iris-dark");
+            }
+
+            if cfg!(feature = "set-arc-darker") {
+                tmp_theme = "arc-darker";
+            } else if cfg!(feature = "set-arc-dark") {
+                tmp_theme = "arc-dark";
+            } else if cfg!(feature = "set-iris-light") {
+                tmp_theme = "iris-light";
+            } else if cfg!(feature = "set-iris-dark") {
+                tmp_theme = "iris-dark";
+            } else {
+                tmp_theme = "arc";
+            }
+            theme = tmp_theme;
+            copy_themes(manifest_dir, &theme_dir, &themes);
+        }
+        theme_file_handle.write_all(theme.as_bytes()).expect("Failed to write theme");
+    }
 }
 
-fn delete_if_exists(file: &Path) {
-    if (*file).exists() {
-        if (*file).metadata().unwrap().is_file() {
-            remove_file(file.clone())
-                .expect(&format!("Failed to delete file \"{}\"", file.to_str().unwrap()));
+fn copy_themes(manifest_dir: &Path, theme_dir: &Path, themes: &Vec<&str>) {
+    for theme_name in themes.iter() {
+        if theme_name == &"arc" {
+
+        } else if theme_name == &"arc-darker" {
+
+        } else if theme_name == &"arc-dark" {
+
+        } else if theme_name == &"iris-light" {
+
+        } else if theme_name == &"iris-dark" {
+
+        }
+    }
+}
+
+fn delete_if_exists(path: &Path) {
+    if (*path).exists() {
+        if (*path).metadata().unwrap().is_file() {
+            remove_file(path.clone())
+                .expect(&format!("Failed to delete path \"{}\"", path.to_str().unwrap()));
+        } else {
+            remove_dir_all(path.clone())
+                .expect(&format!("Failed to delete path \"{}\"", path.to_str().unwrap()));
         }
     }
 }
