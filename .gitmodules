@@ -1,3 +1,12 @@
 [submodule "free-programming-books"]
 	path = free-programming-books
 	url = https://github.com/vhf/free-programming-books
+[submodule "themes/Arc-theme"]
+	path = themes/Arc-theme
+	url = https://github.com/horst3180/Arc-theme
+[submodule "themes/iris"]
+	path = themes/iris
+	url = https://github.com/xyl0n/iris
+[submodule "themes/iris-light"]
+	path = themes/iris-light
+	url = https://github.com/xyl0n/iris-light

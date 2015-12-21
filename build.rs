@@ -150,6 +150,10 @@ pub fn main() {
     }
 }
 
+fn css_comment(line: &str) -> String {
+    format!("/* {} */", line)
+}
+
 fn delete_if_exists(file: &Path) {
     if (*file).exists() {
         if (*file).metadata().unwrap().is_file() {
