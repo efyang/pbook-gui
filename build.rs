@@ -139,7 +139,7 @@ pub fn main() {
             let archive_path = out_dir_path.join("programming-book-downloader.tar.xz");
             delete_if_exists(&archive_path);
             Command::new("tar")
-                .arg("-cfJ")
+                .arg("cfJ")
                 .arg(archive_path.to_str().unwrap())
                 .arg("-C")
                 .arg(out_dir_path.to_str().unwrap())
