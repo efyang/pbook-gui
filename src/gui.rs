@@ -7,7 +7,13 @@ use gtk::{CssProvider, StyleContext, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gdk::screen::Screen;
 use std::path::Path;
 
-const DEFAULT_GTK_CSS_CONFIG: &'static str = "gtk.css";
+#[cfg(windows)]
+const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
+
+#[cfg(not(windows))]
+const DEFAULT_GTK_CSS_CONFIG: &'static str = "../gtk.css";
+
+const SECONDARY_GTK_CSS_CONFIG: &'static str = "gtk.css";
 
 pub fn gui(data: Vec<Category>) {
     if gtk::init().is_err() {
@@ -28,7 +34,21 @@ pub fn gui(data: Vec<Category>) {
             no_css_error();
         }
     } else {
-        no_css_error();
+        if Path::new(SECONDARY_GTK_CSS_CONFIG).exists() {
+            if let Ok(style_provider) = CssProvider::load_from_path(SECONDARY_GTK_CSS_CONFIG) {
+                if let Some(screen) = Screen::get_default() {
+                    StyleContext::add_provider_for_screen(&screen,
+                                                          &style_provider,
+                                                          STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+                } else {
+                    no_css_error();
+                }
+            } else {
+                no_css_error();
+            }
+        } else {
+            no_css_error();
+        }
     }
 
     let window = gtk::Window::new(gtk::WindowType::Toplevel).unwrap();
