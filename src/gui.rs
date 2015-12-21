@@ -6,6 +6,7 @@ use gtk::signal::Inhibit;
 use gtk::{CssProvider, StyleContext, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gdk::screen::Screen;
 use std::path::Path;
+use std::env;
 
 #[cfg(windows)]
 const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
@@ -20,9 +21,23 @@ pub fn gui(data: Vec<Category>) {
         println!("Failed to initialize GTK.");
         return;
     }
+
+    let current_exe_path;
+    match env::current_exe() {
+        Ok(exe_path) => current_exe_path = exe_path.clone(),
+        Err(e) => {
+            println!("failed to get current exe path: {}", e);
+            current_exe_path = Path::new("./placeholder").to_path_buf()
+        }
+    };
+    let current_working_dir = current_exe_path.parent().unwrap_or(Path::new("./"));
+
     // check if gtk css config exists, if so use it
-    if Path::new(DEFAULT_GTK_CSS_CONFIG).exists() {
-        if let Ok(style_provider) = CssProvider::load_from_path(DEFAULT_GTK_CSS_CONFIG) {
+    if current_working_dir.join(DEFAULT_GTK_CSS_CONFIG).exists() {
+        if let Ok(style_provider) =
+               CssProvider::load_from_path(current_working_dir.join(DEFAULT_GTK_CSS_CONFIG)
+                                                              .to_str()
+                                                              .unwrap()) {
             if let Some(screen) = Screen::get_default() {
                 StyleContext::add_provider_for_screen(&screen,
                                                       &style_provider,
@@ -34,8 +49,11 @@ pub fn gui(data: Vec<Category>) {
             no_css_error();
         }
     } else {
-        if Path::new(SECONDARY_GTK_CSS_CONFIG).exists() {
-            if let Ok(style_provider) = CssProvider::load_from_path(SECONDARY_GTK_CSS_CONFIG) {
+        if current_working_dir.join(SECONDARY_GTK_CSS_CONFIG).exists() {
+            if let Ok(style_provider) =
+                   CssProvider::load_from_path(current_working_dir.join(SECONDARY_GTK_CSS_CONFIG)
+                                                                  .to_str()
+                                                                  .unwrap()) {
                 if let Some(screen) = Screen::get_default() {
                     StyleContext::add_provider_for_screen(&screen,
                                                           &style_provider,

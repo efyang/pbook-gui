@@ -71,10 +71,11 @@ pub fn main() {
         let deps = Path::new(&root_dir).join("deps");
         let dlout = deps.join(file_name);
         match create_dir_all(deps.clone()) {
-            Ok(_) => {},
+            Ok(_) => {}
             Err(_) => panic!("Failed to make dir \"deps\""),
         }
-        let mut outfile = BufWriter::new(File::create(dlout.clone()).expect("Failed to make gtk.7z file"));
+        let mut outfile = BufWriter::new(File::create(dlout.clone())
+                                             .expect("Failed to make gtk.7z file"));
         let stream = try_until_stream(download_link, 5);
         for byte in stream.bytes() {
             outfile.write(&[byte.unwrap()]).expect(&format!("Failed to write to {}", file_name));
@@ -93,24 +94,26 @@ pub fn main() {
             .output()
             .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         // let cargo search the unzipped dir
-        println!("cargo:rustc-link-search=native={}", format!("{deps}{s}{s}lib{b}",
-                    deps = deps_dir,
-                    s = FSEP,
-                    b = bitsize));
+        println!("cargo:rustc-link-search=native={}",
+                 format!("{deps}{s}{s}lib{b}", deps = deps_dir, s = FSEP, b = bitsize));
 
         // create the dist dir
         let out_dir = double_slashes(&out_dir);
         let out_dir_path = Path::new(&out_dir);
-        println!("cargo:rerun-if-changed={}", (*out_dir_path).to_str().unwrap());
+        println!("cargo:rerun-if-changed={}",
+                 (*out_dir_path).to_str().unwrap());
         let dist_dir = out_dir_path.join("programming-book-downloader");
         let bin_dir = dist_dir.join("bin");
         create_dir_all(bin_dir.clone()).expect("Failed to create bin dir");
-        copy_dir(&deps.join(format!("lib{}", bitsize)), &bin_dir).expect("Failed to copy all deps to bin dir");
+        copy_dir(&deps.join(format!("lib{}", bitsize)), &bin_dir)
+            .expect("Failed to copy all deps to bin dir");
         let launcher_path = out_dir_path.join("pbook-launcher.exe");
         let main_path = out_dir_path.join("pbook-gui.exe");
+        copy(gtk_css_path.clone(), out_dir_path.join("gtk.css")).expect("Failed to copy gtk.css");
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
         if launcher_path.exists() && main_path.exists() {
-            copy(launcher_path, dist_dir.join("pbook-launcher.exe")).expect("Failed to copy launcher");
+            copy(launcher_path, dist_dir.join("pbook-launcher.exe"))
+                .expect("Failed to copy launcher");
             copy(main_path, bin_dir.join("pbook-gui.exe")).expect("Failed to copy main executable");
             // zip it all up
             let archive_path = out_dir_path.join("programming-book-downloader.zip");
@@ -125,12 +128,14 @@ pub fn main() {
     } else {
         // create the dist dir
         let out_dir_path = Path::new(&out_dir);
-        println!("cargo:rerun-if-changed={}", (*out_dir_path).to_str().unwrap());
+        println!("cargo:rerun-if-changed={}",
+                 (*out_dir_path).to_str().unwrap());
         let dist_dir = out_dir_path.join("programming-book-downloader");
         let bin_dir = dist_dir.join("bin");
         create_dir_all(bin_dir.clone()).expect("Failed to create bin dir");
         let launcher_path = out_dir_path.join("pbook-launcher");
         let main_path = out_dir_path.join("pbook-gui");
+        copy(gtk_css_path.clone(), out_dir_path.join("gtk.css")).expect("Failed to copy gtk.css");
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
         if launcher_path.exists() && main_path.exists() {
             copy(launcher_path, dist_dir.join("pbook-launcher")).expect("Failed to copy launcher");
@@ -157,7 +162,8 @@ fn css_comment(line: &str) -> String {
 fn delete_if_exists(file: &Path) {
     if (*file).exists() {
         if (*file).metadata().unwrap().is_file() {
-            remove_file(file.clone()).expect(&format!("Failed to delete file \"{}\"", file.to_str().unwrap()));
+            remove_file(file.clone())
+                .expect(&format!("Failed to delete file \"{}\"", file.to_str().unwrap()));
         }
     }
 }
@@ -189,8 +195,8 @@ fn try_until_stream(link: &str, maxtimes: usize) -> Response {
             Ok(res) => {
                 stream = Some(res);
                 break;
-            },
-            Err(_) => {},
+            }
+            Err(_) => {}
         }
     }
 

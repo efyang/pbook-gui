@@ -14,3 +14,15 @@ num_cpus = "0.2"
 
 [build-dependencies]
 hyper = "*"
+
+[features]
+default = ["all-themes"]
+# Write theme config to gtktheme.txt in output dir
+# override hierarchy if all-themes and some theme given
+all-themes = ["arc"]
+# If multiple themes given, use hierarchy
+arc = []
+arc-darker = []
+arc-dark = []
+iris-light = []
+iris-dark = []
