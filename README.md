@@ -20,4 +20,4 @@
 	* threadpool is Hashmap<thread, bool> (bool is whether working or not)
 	* Check for open threads on each gui update loop
 
-* NOTE: Included windows deps are only x64
+* Have gtktheme file that specifies a gtk theme, on start read and then combine with gtk.css and then parse -- use main git branch for feature
