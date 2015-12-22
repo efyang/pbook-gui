@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["honorabrutroll <edward.yang6771@gmail.com>"]
 build = "build.rs"
 
+[profile.dev]
+opt-level = 2
+
 [dependencies]
 hyper = "0.6.16"
 gtk = {git = "https://github.com/gtk-rs/gtk"}
@@ -14,6 +17,8 @@ num_cpus = "0.2"
 
 [build-dependencies]
 hyper = "*"
+tiny-keccak = "1.0.3"
+rustc-serialize = "0.3.16"
 
 [features]
 default = ["set-arc"]

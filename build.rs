@@ -1,4 +1,6 @@
 extern crate hyper;
+extern crate tiny_keccak;
+extern crate rustc_serialize;
 
 use std::io::prelude::*;
 use std::io::BufWriter;
@@ -7,6 +9,8 @@ use std::fs::{create_dir_all, File, copy, read_dir, remove_file, remove_dir_all,
 use std::env;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tiny_keccak::Keccak;
+use rustc_serialize::hex::ToHex;
 use hyper::client::Client;
 use hyper::client::response::Response;
 
@@ -17,6 +21,13 @@ const FSEP: &'static str = "\\";
 
 #[cfg(not(windows))]
 const FSEP: &'static str = "/";
+
+// keccak-224 hash
+#[cfg(target_pointer_width = "32")]
+const LIB_CHECKSUM: &'static str = "a8cbe4f2f60d2f2013babab09a467129d846e8d833895ae5711845e4";
+
+#[cfg(target_pointer_width = "64")]
+const LIB_CHECKSUM: &'static str = "da79d49ed03ae6695d9cf22f259937d839ae6b7971b3c184352e2fcc";
 
 pub fn main() {
     // update git submodule
@@ -69,31 +80,34 @@ pub fn main() {
             bitsize = "64";
         }
         let deps = Path::new(&root_dir).join("deps");
+        let deps_dir = double_slashes(deps.to_str().unwrap());
         let dlout = deps.join(file_name);
         match create_dir_all(deps.clone()) {
             Ok(_) => {}
             Err(_) => panic!("Failed to make dir \"deps\""),
         }
-        let mut outfile = BufWriter::new(File::create(dlout.clone())
-                                             .expect("Failed to make gtk.7z file"));
-        let stream = try_until_stream(download_link, 5);
-        for byte in stream.bytes() {
-            outfile.write(&[byte.unwrap()]).expect(&format!("Failed to write to {}", file_name));
-        }
-        outfile.flush().expect(&format!("Failed to flush to {}", file_name));
-        drop(outfile);
-        // unzip the downloaded libraries
         let zpath = format!(".{s}{s}7z{s}{s}{arch}{s}{s}7za.exe", s = FSEP, arch = arch);
-        let deps_dir = double_slashes(deps.to_str().unwrap());
-        println!("cargo:rerun-if-changed={}", deps_dir);
-        Command::new(zpath.clone())
-            .arg("x")
-            .arg(dlout.to_str().unwrap())
-            .arg("-o.\\\\deps")
-            .arg("-y")
-            .output()
-            .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
-        // let cargo search the unzipped dir
+        // lib file doesnt exist or checksum is incorrect -> redownload
+        if !(dlout.exists() && &file_sha3_hash(&dlout).unwrap_or("".to_string()) == LIB_CHECKSUM) {
+            let mut outfile = BufWriter::new(File::create(dlout.clone())
+                                                 .expect("Failed to make gtk.7z file"));
+            let stream = try_until_stream(download_link, 5);
+            for byte in stream.bytes() {
+                outfile.write(&[byte.unwrap()]).expect(&format!("Failed to write to {}", file_name));
+            }
+            outfile.flush().expect(&format!("Failed to flush to {}", file_name));
+            drop(outfile);
+            // unzip the downloaded libraries
+            println!("cargo:rerun-if-changed={}", deps_dir);
+            Command::new(zpath.clone())
+                .arg("x")
+                .arg(dlout.to_str().unwrap())
+                .arg("-o.\\\\deps")
+                .arg("-y")
+                .output()
+                .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
+        }
+                // let cargo search the unzipped dir
         println!("cargo:rustc-link-search=native={}",
                  format!("{deps}{s}{s}lib{b}", deps = deps_dir, s = FSEP, b = bitsize));
 
@@ -264,6 +278,28 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
         copy(out_dir.join("theme.txt"), dist_dir.join("theme.txt"))
             .expect("Failed to copy themes.txt");
     }
+}
+
+fn file_sha3_hash(path: &Path) -> Result<String, std::io::Error> {
+    let mut buf = vec![];
+    let mut f;
+    match File::open(path) {
+        Ok(p) => f = p,
+        Err(e) => return Err(e),
+    }
+    match f.read_to_end(&mut buf) {
+        Ok(_) => {}
+        Err(e) => return Err(e),
+    }
+    return Ok(sha3_224_hash(&buf).to_hex());
+}
+
+fn sha3_224_hash(data: &[u8]) -> [u8; 28] {
+    let mut sha3 = Keccak::new_sha3_224();
+    sha3.update(data);
+    let mut res: [u8; 28] = [0; 28];
+    sha3.finalize(&mut res);
+    res
 }
 
 fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, themes: &Vec<&str>) {
