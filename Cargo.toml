@@ -6,9 +6,9 @@ build = "build.rs"
 
 [dependencies]
 hyper = "0.6.16"
-gtk = "*"
-glib = "*"
-gdk = "*"
+gtk = {git = "https://github.com/gtk-rs/gtk"}
+glib = {git = "https://github.com/gtk-rs/glib"}
+gdk = {git = "https://github.com/gtk-rs/gdk"}
 threadpool = "0.1"
 num_cpus = "0.2"
 
@@ -37,3 +37,4 @@ set-arc-darker-solid = ["arc-darker-solid"]
 set-arc-dark-solid = ["arc-dark-solid"]
 set-iris-light = ["iris-light"]
 set-iris-dark = ["iris-dark"]
+# Add numix theme

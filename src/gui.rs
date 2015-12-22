@@ -5,8 +5,10 @@ use gtk::traits::*;
 use gtk::signal::Inhibit;
 use gtk::{CssProvider, StyleContext, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gdk::screen::Screen;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::env;
+use std::fs::File;
+use std::io::prelude::*;
 
 #[cfg(windows)]
 const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
@@ -15,6 +17,7 @@ const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
 const DEFAULT_GTK_CSS_CONFIG: &'static str = "../gtk.css";
 
 const SECONDARY_GTK_CSS_CONFIG: &'static str = "gtk.css";
+const GTK_THEME_CFG: &'static str = "theme.txt";
 
 pub fn gui(data: Vec<Category>) {
     if gtk::init().is_err() {
@@ -27,45 +30,85 @@ pub fn gui(data: Vec<Category>) {
         Ok(exe_path) => current_exe_path = exe_path.clone(),
         Err(e) => {
             println!("failed to get current exe path: {}", e);
-            current_exe_path = Path::new("./placeholder").to_path_buf()
+            current_exe_path = Path::new("./pbook-gui").to_path_buf()
         }
     };
-    let current_working_dir = current_exe_path.parent().unwrap_or(Path::new("./"));
+    let current_working_dir = current_exe_path.parent()
+                                              .unwrap_or(Path::new(".."));
+    let default_config_path = current_working_dir.join(DEFAULT_GTK_CSS_CONFIG);
+    let secondary_config_path = current_working_dir.join(SECONDARY_GTK_CSS_CONFIG);
 
-    // check if gtk css config exists, if so use it
-    if current_working_dir.join(DEFAULT_GTK_CSS_CONFIG).exists() {
-        if let Ok(style_provider) =
-               CssProvider::load_from_path(current_working_dir.join(DEFAULT_GTK_CSS_CONFIG)
-                                                              .to_str()
-                                                              .unwrap()) {
-            if let Some(screen) = Screen::get_default() {
-                StyleContext::add_provider_for_screen(&screen,
-                                                      &style_provider,
-                                                      STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
-            } else {
-                no_css_error();
+    match get_theme_dir(&current_working_dir) {
+        Ok(theme_dir) => {
+            // check if gtk css config exists, if so use it
+            let mut gtk_theme = String::new();
+            match File::open(current_working_dir.join("..").join(GTK_THEME_CFG)) {
+                Ok(ref mut gtk_cfg_file) => {
+                    match gtk_cfg_file.read_to_string(&mut gtk_theme) {
+                        Ok(_) => {}
+                        Err(_) => {
+                            println!("Could not read theme.txt file to string, defaulting to Arc \
+                                      theme.");
+                            gtk_theme = "arc".to_string();
+                        }
+                    }
+                }
+                Err(_) => {
+                    match File::open(current_working_dir.join(GTK_THEME_CFG)) {
+                        Ok(ref mut gtk_cfg_file) => {
+                            match gtk_cfg_file.read_to_string(&mut gtk_theme) {
+                                Ok(_) => {}
+                                Err(_) => {
+                                    println!("Could not read theme.txt file to string, defaulting to Arc \
+                                              theme.");
+                                    gtk_theme = "arc".to_string();
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            println!("No theme.txt file found, defaulting to Arc theme.");
+                            gtk_theme = "arc".to_string();
+                        }
+                    }
+                }
             }
-        } else {
-            no_css_error();
-        }
-    } else {
-        if current_working_dir.join(SECONDARY_GTK_CSS_CONFIG).exists() {
-            if let Ok(style_provider) =
-                   CssProvider::load_from_path(current_working_dir.join(SECONDARY_GTK_CSS_CONFIG)
-                                                                  .to_str()
-                                                                  .unwrap()) {
-                if let Some(screen) = Screen::get_default() {
-                    StyleContext::add_provider_for_screen(&screen,
-                                                          &style_provider,
-                                                          STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+            let gtk_theme_path = theme_dir.join(gtk_theme).join("gtk.css");
+            if default_config_path.exists() {
+                let new_css = get_gtk_css(&default_config_path, &gtk_theme_path);
+                if let Ok(style_provider) = CssProvider::load_from_data(&new_css) {
+                    if let Some(screen) = Screen::get_default() {
+                        StyleContext::add_provider_for_screen(&screen,
+                                                              &style_provider,
+                                                              STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+                    } else {
+                        println!("here1");
+                        no_css_error();
+                    }
                 } else {
+                    println!("here2");
+                    no_css_error();
+                }
+            } else if secondary_config_path.exists() {
+                let new_css = get_gtk_css(&secondary_config_path, &gtk_theme_path);
+                if let Ok(style_provider) = CssProvider::load_from_data(&new_css) {
+                    if let Some(screen) = Screen::get_default() {
+                        StyleContext::add_provider_for_screen(&screen,
+                                                              &style_provider,
+                                                              STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+                    } else {
+                        println!("here1");
+                        no_css_error();
+                    }
+                } else {
+                    println!("here2");
                     no_css_error();
                 }
             } else {
                 no_css_error();
             }
-        } else {
-            no_css_error();
+        }
+        Err(e) => {
+            println!("{}", e);
         }
     }
 
@@ -103,6 +146,46 @@ pub fn gui(data: Vec<Category>) {
     window.show_all();
     gtk::main();
 
+}
+
+fn get_gtk_css(config_path: &Path, gtk_theme_path: &Path) -> String {
+    let mut gtk_config = String::new();
+    match File::open(config_path) {
+        Ok(ref mut f) => {
+            match f.read_to_string(&mut gtk_config) {
+                Ok(_) => {}
+                Err(_) => {
+                    println!("Could not read gtk config to string, going with defaults");
+                    gtk_config = "".to_string();
+                }
+            }
+        }
+        Err(_) => {
+            println!("Could not open gtk config");
+            gtk_config = "".to_string();
+        }
+    }
+    [gtk_config, make_import_css(gtk_theme_path)].join("\n")
+}
+
+fn make_import_css(path: &Path) -> String {
+    ["@import url(\"", double_slashes(path.to_str().unwrap()).as_str(), "\");\n"].join("")
+}
+
+fn double_slashes(p: &str) -> String {
+    p.replace("\\", "\\\\")
+}
+
+fn get_theme_dir(cwd: &Path) -> Result<PathBuf, String> {
+    let first_choice = cwd.join("..").join("themes");
+    let second_choice = cwd.join("themes");
+    if first_choice.exists() {
+        Ok(first_choice)
+    } else if second_choice.exists() {
+        Ok(second_choice)
+    } else {
+        Err("Failed to get theme dir".to_string())
+    }
 }
 
 fn no_css_error() {

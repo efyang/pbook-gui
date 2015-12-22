@@ -340,12 +340,6 @@ fn ne_to_any(all: &Vec<&Path>, try: &Path) -> bool {
     return true;
 }
 
-fn remove_all(paths: Vec<&Path>) {
-    for path in paths.iter() {
-        delete_if_exists(path);
-    }
-}
-
 fn delete_if_exists(path: &Path) {
     if (*path).exists() {
         if (*path).metadata().unwrap().is_file() {
