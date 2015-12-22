@@ -166,7 +166,9 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
     delete_if_exists(&dist_dir.join("themes"));
     if cfg!(feature = "all-themes") || cfg!(feature = "arc") || cfg!(feature = "arc-darker") ||
        cfg!(feature = "arc-dark") ||
-       cfg!(feature = "iris-light") || cfg!(feature = "iris-dark") {
+       cfg!(feature = "arc-solid") || cfg!(feature = "arc-darker-solid") ||
+       cfg!(feature = "arc-dark-solid") || cfg!(feature = "iris-light") ||
+       cfg!(feature = "iris-dark") {
         // theme should be active -> add it in to gtk.css in dist instances
         let theme_dir = out_dir.join("themes");
         create_dir_all(theme_dir.clone()).expect("Failed to create theme dir");
@@ -196,7 +198,14 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
             copy_themes(&manifest_dir.join("themes"),
                         &theme_dir,
                         dist_dir,
-                        &vec!["arc", "arc-darker", "arc-dark", "arc-solid", "arc-darker-solid", "arc-dark-solid", "iris-light", "iris-dark"]);
+                        &vec!["arc",
+                              "arc-darker",
+                              "arc-dark",
+                              "arc-solid",
+                              "arc-darker-solid",
+                              "arc-dark-solid",
+                              "iris-light",
+                              "iris-dark"]);
         } else {
             let mut themes = Vec::new();
             let mut tmp_theme = "arc";
@@ -252,7 +261,8 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
         }
         theme_file_handle.write_all(theme.as_bytes()).expect("Failed to write theme to theme.txt");
         drop(theme_file_handle);
-        copy(out_dir.join("theme.txt"), dist_dir.join("theme.txt")).expect("Failed to copy themes.txt");
+        copy(out_dir.join("theme.txt"), dist_dir.join("theme.txt"))
+            .expect("Failed to copy themes.txt");
     }
 }
 
@@ -267,15 +277,20 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained.css")], &theme_out);
-            rename(theme_out.join("gtk-contained.css"), theme_out.join("gtk.css")).expect("Failed to rename");
+            rename(theme_out.join("gtk-contained.css"),
+                   theme_out.join("gtk.css"))
+                .expect("Failed to rename");
         } else if theme_name == &"arc-darker" {
             theme_root = theme_root_dir.join("Arc-theme")
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
-            remove_all_css_besides(&vec![&theme_out.join("gtk-contained-darker.css")], &theme_out);
-            rename(theme_out.join("gtk-contained-darker.css"), theme_out.join("gtk.css")).expect("Failed to rename");
+            remove_all_css_besides(&vec![&theme_out.join("gtk-contained-darker.css")],
+                                   &theme_out);
+            rename(theme_out.join("gtk-contained-darker.css"),
+                   theme_out.join("gtk.css"))
+                .expect("Failed to rename");
         } else if theme_name == &"arc-dark" {
             theme_root = theme_root_dir.join("Arc-theme")
                                        .join("common")
@@ -283,32 +298,43 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-dark.css")], &theme_out);
-            rename(theme_out.join("gtk-contained-dark.css"), theme_out.join("gtk.css")).expect("Failed to rename");
+            rename(theme_out.join("gtk-contained-dark.css"),
+                   theme_out.join("gtk.css"))
+                .expect("Failed to rename");
         } else if theme_name == &"arc-solid" {
             theme_root = theme_root_dir.join("Arc-theme")
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
-            remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid.css")], &theme_out);
-            rename(theme_out.join("gtk-contained-solid.css"), theme_out.join("gtk.css")).expect("Failed to rename");
-       } else if theme_name == &"arc-darker-solid" {
+            remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid.css")],
+                                   &theme_out);
+            rename(theme_out.join("gtk-contained-solid.css"),
+                   theme_out.join("gtk.css"))
+                .expect("Failed to rename");
+        } else if theme_name == &"arc-darker-solid" {
             theme_root = theme_root_dir.join("Arc-theme")
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
-            remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid-darker.css")], &theme_out);
-            rename(theme_out.join("gtk-contained-solid-darker.css"), theme_out.join("gtk.css")).expect("Failed to rename");
-      } else if theme_name == &"arc-dark-solid" {
+            remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid-darker.css")],
+                                   &theme_out);
+            rename(theme_out.join("gtk-contained-solid-darker.css"),
+                   theme_out.join("gtk.css"))
+                .expect("Failed to rename");
+        } else if theme_name == &"arc-dark-solid" {
             theme_root = theme_root_dir.join("Arc-theme")
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
-            remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid-dark.css")], &theme_out);
-            rename(theme_out.join("gtk-contained-solid-dark.css"), theme_out.join("gtk.css")).expect("Failed to rename");
-     } else if theme_name == &"iris-light" {
+            remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid-dark.css")],
+                                   &theme_out);
+            rename(theme_out.join("gtk-contained-solid-dark.css"),
+                   theme_out.join("gtk.css"))
+                .expect("Failed to rename");
+        } else if theme_name == &"iris-light" {
             theme_root = theme_root_dir.join("iris-light")
                                        .join("gtk-3.0");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
@@ -318,7 +344,8 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
         }
     }
-    copy_dir(&theme_out_dir.to_path_buf(), &dist_dir.join("themes")).expect("Failed to copy themes");
+    copy_dir(&theme_out_dir.to_path_buf(), &dist_dir.join("themes"))
+        .expect("Failed to copy themes");
 }
 
 fn remove_all_css_besides(noremove: &Vec<&Path>, dir: &Path) {

@@ -16,7 +16,7 @@ num_cpus = "0.2"
 hyper = "*"
 
 [features]
-default = ["all-themes"]
+default = ["set-arc"]
 # Write theme config to gtktheme.txt in output dir
 # override hierarchy if all-themes and some theme given
 all-themes = ["arc"]

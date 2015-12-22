@@ -59,8 +59,8 @@ pub fn gui(data: Vec<Category>) {
                             match gtk_cfg_file.read_to_string(&mut gtk_theme) {
                                 Ok(_) => {}
                                 Err(_) => {
-                                    println!("Could not read theme.txt file to string, defaulting to Arc \
-                                              theme.");
+                                    println!("Could not read theme.txt file to string, \
+                                              defaulting to Arc theme.");
                                     gtk_theme = "arc".to_string();
                                 }
                             }
