@@ -47,8 +47,11 @@ pub fn main() {
     let gtk_css_path = Path::new(&src_dir).join("gtk.css");
     let mut include_file = File::create(format!("{}{}{}", src_dir, FSEP, "include.rs"))
                                .expect("Failed to create \"include.rs\" file");
-    let pbook_data_path = format!("{}{}{}{}{}{}{}",
+    let pbook_data_path = format!("{}{}{}{}{}{}{}{}{}{}",
                                   manifest_dir,
+                                  FSEP,
+                                  FSEP,
+                                  "resources",
                                   FSEP,
                                   FSEP,
                                   "free-programming-books",
@@ -79,14 +82,14 @@ pub fn main() {
             arch = "x64";
             bitsize = "64";
         }
-        let deps = Path::new(&root_dir).join("deps");
+        let deps = Path::new(&root_dir).join("resources").join("deps");
         let deps_dir = double_slashes(deps.to_str().unwrap());
         let dlout = deps.join(file_name);
         match create_dir_all(deps.clone()) {
             Ok(_) => {}
             Err(_) => panic!("Failed to make dir \"deps\""),
         }
-        let zpath = format!(".{s}{s}7z{s}{s}{arch}{s}{s}7za.exe", s = FSEP, arch = arch);
+        let zpath = Path::new(&root_dir).join("build").join("utils").join("7z").join(arch).join("7za.exe");
         // lib file doesnt exist or checksum is incorrect -> redownload
         if !(dlout.exists() && &file_sha3_hash(&dlout).unwrap_or("".to_string()) == LIB_CHECKSUM) {
             let mut outfile = BufWriter::new(File::create(dlout.clone())
@@ -271,7 +274,7 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
                 tmp_theme = "iris-dark";
             }
             theme = tmp_theme;
-            copy_themes(&manifest_dir.join("themes"), &theme_dir, dist_dir, &themes);
+            copy_themes(&manifest_dir.join("resources").join("themes"), &theme_dir, dist_dir, &themes);
         }
         theme_file_handle.write_all(theme.as_bytes()).expect("Failed to write theme to theme.txt");
         drop(theme_file_handle);
