@@ -18,12 +18,6 @@ mod build_launcher;
 
 // build script should be run twice to package
 
-#[cfg(windows)]
-const FSEP: &'static str = "\\";
-
-#[cfg(not(windows))]
-const FSEP: &'static str = "/";
-
 // keccak-224 hash
 #[cfg(target_pointer_width = "32")]
 const LIB_CHECKSUM: &'static str = "a8cbe4f2f60d2f2013babab09a467129d846e8d833895ae5711845e4";
@@ -44,52 +38,46 @@ pub fn main() {
         .output()
         .unwrap_or_else(|e| panic!("failed to execute process: {}", e));
     // store pbooks.md file to include.rs
-    let manifest_dir = double_slashes(&env::var("CARGO_MANIFEST_DIR").unwrap());
-    let src_dir = double_slashes(&format!("{}{}{}", manifest_dir, FSEP, "src"));
-    let gtk_css_path = Path::new(&src_dir).join("gtk.css");
-    let mut include_file = File::create(format!("{}{}{}", src_dir, FSEP, "include.rs"))
+    let manifest_dir_str = env::var("CARGO_MANIFEST_DIR").unwrap();
+    let out_dir_str = env::var("OUT_DIR").unwrap();
+    let manifest_dir = Path::new(&manifest_dir_str);
+    let src_dir = manifest_dir.join("src");
+    let gtk_css_path = src_dir.join("gtk.css");
+    let resource_dir = manifest_dir.join("resources");
+    let build_util_path = manifest_dir.join("build").join("utils");
+    let out_dir = Path::new(&out_dir_str).join("..").join("..").join("..");
+    let dist_dir = out_dir.join("programming-book-downloader");
+    let bin_dir = dist_dir.join("bin");
+    let mut include_file = File::create(src_dir.join("include.rs"))
                                .expect("Failed to create \"include.rs\" file");
-    let pbook_data_path = Path::new(&manifest_dir)
-                              .join("resources")
-                              .join("free-programming-books")
-                              .join("free-programming-books.md");
+    let pbook_data_path = resource_dir.join("free-programming-books")
+                                      .join("free-programming-books.md");
     let include_str = format!("pub const RAW_DATA: &'static str = include_str!(\"{}\");",
                               double_slashes(pbook_data_path.to_str().unwrap()));
     include_file.write_all(include_str.as_bytes())
                 .expect("Failed to write include_str to include.rs");
-    let out_dir = env::var("OUT_DIR").unwrap() + &format!("{s}..{s}..{s}..", s = FSEP);
     if cfg!(windows) {
-        let root_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
         let download_link;
-        let file_name;
+        let lib_name;
         let arch;
         let bitsize;
         if cfg!(target_pointer_width = "32") {
-            // 32 bit
             download_link = "https://github.com/honorabrutroll/mingw-gtk/raw/master/lib32.7z";
-            file_name = "gtk32.7z";
+            lib_name = "gtk32.7z";
             arch = "x86";
             bitsize = "32";
         } else {
-            // 64 bit
             download_link = "https://github.com/honorabrutroll/mingw-gtk/raw/master/lib64.7z";
-            file_name = "gtk64.7z";
+            lib_name = "gtk64.7z";
             arch = "x64";
             bitsize = "64";
         }
-        let deps = Path::new(&root_dir).join("resources").join("deps");
-        let deps_dir = double_slashes(deps.to_str().unwrap());
-        let dlout = deps.join(file_name);
-        match create_dir_all(deps.clone()) {
-            Ok(_) => {}
-            Err(_) => panic!("Failed to make dir \"deps\""),
-        }
-        let zpath = Path::new(&root_dir)
-                        .join("build")
-                        .join("utils")
-                        .join("7z")
-                        .join(arch)
-                        .join("7za.exe");
+        let deps = resource_dir.join("deps");
+        let dlout = deps.join(lib_name);
+        create_dir_all(deps.clone()).expect("Failed to make dir \"deps\"");
+        let zpath = build_util_path.join("7z")
+                                   .join(arch)
+                                   .join("7za.exe");
         // lib file doesnt exist or checksum is incorrect -> redownload
         if !(dlout.exists() && &file_sha3_hash(&dlout).unwrap_or("".to_string()) == LIB_CHECKSUM) {
             let mut outfile = BufWriter::new(File::create(dlout.clone())
@@ -97,95 +85,77 @@ pub fn main() {
             let stream = try_until_stream(download_link, 5);
             for byte in stream.bytes() {
                 outfile.write(&[byte.unwrap()])
-                       .expect(&format!("Failed to write to {}", file_name));
+                       .expect(&format!("Failed to write to {}", lib_name));
             }
-            outfile.flush().expect(&format!("Failed to flush to {}", file_name));
+            outfile.flush().expect(&format!("Failed to flush to {}", lib_name));
             drop(outfile);
-            println!("cargo:rerun-if-changed={}", deps_dir);
+            println!("cargo:rerun-if-changed={}",
+                     double_slashes(deps.to_str().unwrap()));
         }
         // unzip the downloaded libraries
-        if !deps.join(format!("lib{}", bitsize)).exists() {
+        let lib_path = deps.join(format!("lib{}", bitsize));
+        if !lib_path.exists() {
             Command::new(zpath.clone())
-                .arg("x")
-                .arg(dlout.to_str().unwrap())
-                .arg("-o.\\\\resources\\\\deps")
-                .arg("-y")
+                .args(&["x", dlout.to_str().unwrap(), &("-o".to_string() + deps.to_str().unwrap()), "-y"])
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }
         // let cargo search the unzipped dir
         println!("cargo:rustc-link-search=native={}",
-                 format!("{deps}{s}{s}lib{b}", deps = deps_dir, s = FSEP, b = bitsize));
+                 double_slashes(lib_path.to_str().unwrap()));
 
         // create the dist dir
-        let out_dir = double_slashes(&out_dir);
-        let out_dir_path = Path::new(&out_dir);
-        println!("cargo:rerun-if-changed={}",
-                 (*out_dir_path).to_str().unwrap());
-        let dist_dir = out_dir_path.join("programming-book-downloader");
-        let bin_dir = dist_dir.join("bin");
+        println!("cargo:rerun-if-changed={}", out_dir.to_str().unwrap());
         create_dir_all(bin_dir.clone()).expect("Failed to create bin dir");
         copy_dir(&deps.join(format!("lib{}", bitsize)), &bin_dir)
             .expect("Failed to copy all deps to bin dir");
-        let main_path = out_dir_path.join("pbook-gui.exe");
-        copy(gtk_css_path.clone(), out_dir_path.join("gtk.css")).expect("Failed to copy gtk.css");
+        let main_path = out_dir.join("pbook-gui.exe");
+        copy(gtk_css_path.clone(), out_dir.join("gtk.css")).expect("Failed to copy gtk.css");
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
-
-        add_themes(&Path::new(&manifest_dir), &out_dir_path, &dist_dir);
+        add_themes(&Path::new(&manifest_dir), &out_dir, &dist_dir);
         if main_path.exists() {
             let new_launcher_path = dist_dir.join("pbook-launcher.exe");
             let new_main_path = bin_dir.join("pbook-gui.exe");
             build_launcher::build(&Path::new(&src_dir), &dist_dir);
             copy(main_path, &new_main_path).expect("Failed to copy main executable");
             // set icon
-            let rcedit_path = Path::new(&root_dir)
-                                  .join("build")
-                                  .join("utils")
-                                  .join("rcedit")
-                                  .join("rcedit.exe");
-            let icon_path = Path::new(&root_dir)
-                                .join("resources")
-                                .join("icons")
-                                .join("pbook.ico");
+            let rcedit_path = manifest_dir.join("build")
+                                          .join("utils")
+                                          .join("rcedit")
+                                          .join("rcedit.exe");
+            let icon_path = manifest_dir.join("resources")
+                                        .join("icons")
+                                        .join("pbook.ico");
             set_icon(&rcedit_path, &new_launcher_path, &icon_path);
             set_icon(&rcedit_path, &new_main_path, &icon_path);
             // zip it all up
-            let archive_path = out_dir_path.join("programming-book-downloader.zip");
+            let archive_path = out_dir.join("programming-book-downloader.zip");
             delete_if_exists(&archive_path);
             Command::new(zpath)
-                .arg("a")
-                .arg("-tzip")
-                .arg(archive_path.to_str().unwrap())
-                .arg(dist_dir.to_str().unwrap())
+                .args(&["a", "-tzip", archive_path.to_str().unwrap(), dist_dir.to_str().unwrap()])
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }
     } else {
         // create the dist dir
-        let out_dir_path = Path::new(&out_dir);
-        println!("cargo:rerun-if-changed={}",
-                 (*out_dir_path).to_str().unwrap());
-        let dist_dir = out_dir_path.join("programming-book-downloader");
-        let bin_dir = dist_dir.join("bin");
+        println!("cargo:rerun-if-changed={}", out_dir.to_str().unwrap());
         create_dir_all(bin_dir.clone()).expect("Failed to create bin dir");
-        let main_path = out_dir_path.join("pbook-gui");
-        copy(gtk_css_path.clone(), out_dir_path.join("gtk.css")).expect("Failed to copy gtk.css");
+        let main_path = out_dir.join("pbook-gui");
+        copy(gtk_css_path.clone(), out_dir.join("gtk.css")).expect("Failed to copy gtk.css");
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
-
-        add_themes(&Path::new(&manifest_dir), &out_dir_path, &dist_dir);
-
+        add_themes(&Path::new(&manifest_dir), &out_dir, &dist_dir);
         if main_path.exists() {
             build_launcher::build(&Path::new(&src_dir), &dist_dir);
             copy(main_path, bin_dir.join("pbook-gui")).expect("Failed to copy main executable");
             // tarball everything
-            let archive_path = out_dir_path.join("programming-book-downloader.tar.xz");
+            let archive_path = out_dir.join("programming-book-downloader.tar.xz");
             delete_if_exists(&archive_path);
             Command::new("tar")
-                .arg("cfJ")
-                .arg(archive_path.to_str().unwrap())
-                .arg("-C")
-                .arg(out_dir_path.to_str().unwrap())
-                .arg("programming-book-downloader")
+                .args(&["cfJ",
+                        archive_path.to_str().unwrap(),
+                        "-C",
+                        out_dir.to_str().unwrap(),
+                        "programming-book-downloader"])
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }
@@ -209,7 +179,6 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
        cfg!(feature = "arc-solid") || cfg!(feature = "arc-darker-solid") ||
        cfg!(feature = "arc-dark-solid") || cfg!(feature = "iris-light") ||
        cfg!(feature = "iris-dark") {
-        // theme should be active -> add it in to gtk.css in dist instances
         let theme_dir = out_dir.join("themes");
         create_dir_all(theme_dir.clone()).expect("Failed to create theme dir");
         let theme_file = out_dir.join("theme.txt");
@@ -476,16 +445,20 @@ fn try_until_stream(link: &str, maxtimes: usize) -> Response {
             Err(_) => {}
         }
     }
-
     match stream {
         Some(r) => r,
         None => panic!("Failed to connect"),
     }
 }
 
+#[cfg(windows)]
 fn double_slashes(path: &str) -> String {
     path.replace("\\\\\\\\", "\\")
         .replace("\\\\\\", "\\")
         .replace("\\\\", "\\")
         .replace("\\", "\\\\")
+}
+#[cfg(not(windows))]
+fn double_slashes(path: &str) -> String {
+    path.clone()
 }
