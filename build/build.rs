@@ -47,19 +47,12 @@ pub fn main() {
     let gtk_css_path = Path::new(&src_dir).join("gtk.css");
     let mut include_file = File::create(format!("{}{}{}", src_dir, FSEP, "include.rs"))
                                .expect("Failed to create \"include.rs\" file");
-    let pbook_data_path = format!("{}{}{}{}{}{}{}{}{}{}",
-                                  manifest_dir,
-                                  FSEP,
-                                  FSEP,
-                                  "resources",
-                                  FSEP,
-                                  FSEP,
-                                  "free-programming-books",
-                                  FSEP,
-                                  FSEP,
-                                  "free-programming-books.md");
+    let pbook_data_path = Path::new(&manifest_dir)
+                              .join("resources")
+                              .join("free-programming-books")
+                              .join("free-programming-books.md");
     let include_str = format!("pub const RAW_DATA: &'static str = include_str!(\"{}\");",
-                              pbook_data_path);
+                              double_slashes(pbook_data_path.to_str().unwrap()));
     include_file.write_all(include_str.as_bytes())
                 .expect("Failed to write include_str to include.rs");
     let out_dir = env::var("OUT_DIR").unwrap() + &format!("{s}..{s}..{s}..", s = FSEP);
@@ -89,14 +82,20 @@ pub fn main() {
             Ok(_) => {}
             Err(_) => panic!("Failed to make dir \"deps\""),
         }
-        let zpath = Path::new(&root_dir).join("build").join("utils").join("7z").join(arch).join("7za.exe");
+        let zpath = Path::new(&root_dir)
+                        .join("build")
+                        .join("utils")
+                        .join("7z")
+                        .join(arch)
+                        .join("7za.exe");
         // lib file doesnt exist or checksum is incorrect -> redownload
         if !(dlout.exists() && &file_sha3_hash(&dlout).unwrap_or("".to_string()) == LIB_CHECKSUM) {
             let mut outfile = BufWriter::new(File::create(dlout.clone())
                                                  .expect("Failed to make gtk.7z file"));
             let stream = try_until_stream(download_link, 5);
             for byte in stream.bytes() {
-                outfile.write(&[byte.unwrap()]).expect(&format!("Failed to write to {}", file_name));
+                outfile.write(&[byte.unwrap()])
+                       .expect(&format!("Failed to write to {}", file_name));
             }
             outfile.flush().expect(&format!("Failed to flush to {}", file_name));
             drop(outfile);
@@ -110,7 +109,7 @@ pub fn main() {
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }
-                // let cargo search the unzipped dir
+        // let cargo search the unzipped dir
         println!("cargo:rustc-link-search=native={}",
                  format!("{deps}{s}{s}lib{b}", deps = deps_dir, s = FSEP, b = bitsize));
 
@@ -130,11 +129,23 @@ pub fn main() {
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
 
         add_themes(&Path::new(&manifest_dir), &out_dir_path, &dist_dir);
-
         if launcher_path.exists() && main_path.exists() {
-            copy(launcher_path, dist_dir.join("pbook-launcher.exe"))
-                .expect("Failed to copy launcher");
-            copy(main_path, bin_dir.join("pbook-gui.exe")).expect("Failed to copy main executable");
+            let new_launcher_path = dist_dir.join("pbook-launcher.exe");
+            let new_main_path = bin_dir.join("pbook-gui.exe");
+            copy(launcher_path, &new_launcher_path).expect("Failed to copy launcher");
+            copy(main_path, &new_main_path).expect("Failed to copy main executable");
+            // set icon
+            let rcedit_path = Path::new(&root_dir)
+                                  .join("build")
+                                  .join("utils")
+                                  .join("rcedit")
+                                  .join("rcedit.exe");
+            let icon_path = Path::new(&root_dir)
+                                .join("resources")
+                                .join("icons")
+                                .join("pbook.ico");
+            set_icon(&rcedit_path, &new_launcher_path, &icon_path);
+            set_icon(&rcedit_path, &new_main_path, &icon_path);
             // zip it all up
             let archive_path = out_dir_path.join("programming-book-downloader.zip");
             delete_if_exists(&archive_path);
@@ -176,6 +187,15 @@ pub fn main() {
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }
     }
+}
+
+fn set_icon(rcedit_path: &Path, exe_path: &Path, ico_path: &Path) {
+    Command::new(rcedit_path)
+        .arg(exe_path.to_str().unwrap())
+        .arg("--set-icon")
+        .arg(ico_path.to_str().unwrap())
+        .output()
+        .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
 }
 
 fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
@@ -274,7 +294,10 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
                 tmp_theme = "iris-dark";
             }
             theme = tmp_theme;
-            copy_themes(&manifest_dir.join("resources").join("themes"), &theme_dir, dist_dir, &themes);
+            copy_themes(&manifest_dir.join("resources").join("themes"),
+                        &theme_dir,
+                        dist_dir,
+                        &themes);
         }
         theme_file_handle.write_all(theme.as_bytes()).expect("Failed to write theme to theme.txt");
         drop(theme_file_handle);
@@ -457,5 +480,8 @@ fn try_until_stream(link: &str, maxtimes: usize) -> Response {
 }
 
 fn double_slashes(path: &str) -> String {
-    path.replace("\\", "\\\\")
+    path.replace("\\\\\\\\", "\\")
+        .replace("\\\\\\", "\\")
+        .replace("\\\\", "\\")
+        .replace("\\", "\\\\")
 }
