@@ -4,4 +4,4 @@ target
 *.tmp
 *.vi
 src/include.rs
-deps
+resources/deps

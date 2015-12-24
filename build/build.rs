@@ -99,12 +99,14 @@ pub fn main() {
             }
             outfile.flush().expect(&format!("Failed to flush to {}", file_name));
             drop(outfile);
-            // unzip the downloaded libraries
             println!("cargo:rerun-if-changed={}", deps_dir);
+        }
+        // unzip the downloaded libraries
+        if !deps.join(format!("lib{}", bitsize)).exists() {
             Command::new(zpath.clone())
                 .arg("x")
                 .arg(dlout.to_str().unwrap())
-                .arg("-o.\\\\deps")
+                .arg("-o.\\\\resources\\\\deps")
                 .arg("-y")
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
