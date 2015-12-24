@@ -9,6 +9,8 @@ pub fn build(src_dir: &Path, dist_dir: &Path) {
             .arg(dist_dir.join("pbook-launcher.exe").to_str().unwrap())
             .arg("-Os")
             .arg("-mwindows")
+            .arg("-static")
+            .arg("-static-libstdc++")
             .output()
             .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
     } else {
@@ -17,6 +19,8 @@ pub fn build(src_dir: &Path, dist_dir: &Path) {
             .arg("-o")
             .arg(dist_dir.join("pbook-launcher").to_str().unwrap())
             .arg("-Os")
+            .arg("-static")
+            .arg("-static-libstdc++")
             .output()
             .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
     }
