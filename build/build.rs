@@ -153,6 +153,7 @@ pub fn main() {
             delete_if_exists(&archive_path);
             Command::new(zpath)
                 .arg("a")
+                .arg("-tzip")
                 .arg(archive_path.to_str().unwrap())
                 .arg(dist_dir.to_str().unwrap())
                 .output()
@@ -234,7 +235,7 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
             } else {
                 theme = "arc";
             }
-            copy_themes(&manifest_dir.join("themes"),
+            copy_themes(&manifest_dir.join("resources").join("themes"),
                         &theme_dir,
                         dist_dir,
                         &vec!["arc",
@@ -339,7 +340,8 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
-            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
+            println!("{:?}", &theme_root);
+            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained.css")], &theme_out);
             rename(theme_out.join("gtk-contained.css"),
                    theme_out.join("gtk.css"))
@@ -349,7 +351,7 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
-            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
+            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-darker.css")],
                                    &theme_out);
             rename(theme_out.join("gtk-contained-darker.css"),
@@ -360,7 +362,7 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
-            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
+            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-dark.css")], &theme_out);
             rename(theme_out.join("gtk-contained-dark.css"),
                    theme_out.join("gtk.css"))
@@ -370,7 +372,7 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
-            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
+            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid.css")],
                                    &theme_out);
             rename(theme_out.join("gtk-contained-solid.css"),
@@ -381,7 +383,7 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
-            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
+            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid-darker.css")],
                                    &theme_out);
             rename(theme_out.join("gtk-contained-solid-darker.css"),
@@ -392,7 +394,7 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
-            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
+            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid-dark.css")],
                                    &theme_out);
             rename(theme_out.join("gtk-contained-solid-dark.css"),
@@ -401,11 +403,11 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
         } else if theme_name == &"iris-light" {
             theme_root = theme_root_dir.join("iris-light")
                                        .join("gtk-3.0");
-            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
+            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir iris-light");
         } else if theme_name == &"iris-dark" {
             theme_root = theme_root_dir.join("iris")
                                        .join("gtk-3.0");
-            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir");
+            copy_dir(&theme_root, &theme_out).expect("Failed to copy dir iris-dark");
         }
     }
     copy_dir(&theme_out_dir.to_path_buf(), &dist_dir.join("themes"))
