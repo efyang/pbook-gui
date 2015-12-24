@@ -14,6 +14,8 @@ use rustc_serialize::hex::ToHex;
 use hyper::client::Client;
 use hyper::client::response::Response;
 
+mod build_launcher;
+
 // build script should be run twice to package
 
 #[cfg(windows)]
@@ -125,16 +127,15 @@ pub fn main() {
         create_dir_all(bin_dir.clone()).expect("Failed to create bin dir");
         copy_dir(&deps.join(format!("lib{}", bitsize)), &bin_dir)
             .expect("Failed to copy all deps to bin dir");
-        let launcher_path = out_dir_path.join("pbook-launcher.exe");
         let main_path = out_dir_path.join("pbook-gui.exe");
         copy(gtk_css_path.clone(), out_dir_path.join("gtk.css")).expect("Failed to copy gtk.css");
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
 
         add_themes(&Path::new(&manifest_dir), &out_dir_path, &dist_dir);
-        if launcher_path.exists() && main_path.exists() {
+        if main_path.exists() {
             let new_launcher_path = dist_dir.join("pbook-launcher.exe");
             let new_main_path = bin_dir.join("pbook-gui.exe");
-            copy(launcher_path, &new_launcher_path).expect("Failed to copy launcher");
+            build_launcher::build(&Path::new(&src_dir), &dist_dir);
             copy(main_path, &new_main_path).expect("Failed to copy main executable");
             // set icon
             let rcedit_path = Path::new(&root_dir)
@@ -167,15 +168,14 @@ pub fn main() {
         let dist_dir = out_dir_path.join("programming-book-downloader");
         let bin_dir = dist_dir.join("bin");
         create_dir_all(bin_dir.clone()).expect("Failed to create bin dir");
-        let launcher_path = out_dir_path.join("pbook-launcher");
         let main_path = out_dir_path.join("pbook-gui");
         copy(gtk_css_path.clone(), out_dir_path.join("gtk.css")).expect("Failed to copy gtk.css");
         copy(gtk_css_path, dist_dir.join("gtk.css")).expect("Failed to copy gtk.css");
 
         add_themes(&Path::new(&manifest_dir), &out_dir_path, &dist_dir);
 
-        if launcher_path.exists() && main_path.exists() {
-            copy(launcher_path, dist_dir.join("pbook-launcher")).expect("Failed to copy launcher");
+        if main_path.exists() {
+            build_launcher::build(&Path::new(&src_dir), &dist_dir);
             copy(main_path, bin_dir.join("pbook-gui")).expect("Failed to copy main executable");
             // tarball everything
             let archive_path = out_dir_path.join("programming-book-downloader.tar.xz");
