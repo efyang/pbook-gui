@@ -460,5 +460,5 @@ fn double_slashes(path: &str) -> String {
 }
 #[cfg(not(windows))]
 fn double_slashes(path: &str) -> String {
-    path.clone()
+    path.to_string()
 }
