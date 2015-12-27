@@ -12,8 +12,8 @@ hyper = "0.6.16"
 gtk = {git = "https://github.com/gtk-rs/gtk"}
 glib = {git = "https://github.com/gtk-rs/glib"}
 gdk = {git = "https://github.com/gtk-rs/gdk"}
-threadpool = "0.1"
 num_cpus = "0.2"
+comm = {git = "https://github.com/mahkoh/comm"}
 
 [build-dependencies]
 hyper = "*"

@@ -3,7 +3,6 @@
 extern crate hyper;
 extern crate gtk;
 extern crate gdk;
-extern crate threadpool;
 extern crate num_cpus;
 
 use threadpool::ThreadPool;
@@ -13,6 +12,8 @@ mod download;
 mod include;
 mod gui;
 mod parse;
+mod merge_handler;
+mod threadpool;
 
 use parse::*;
 use include::RAW_DATA;
@@ -32,7 +33,7 @@ fn main() {
     } else {
         max_threads = 4;
     }
-    let pool = ThreadPool::new(max_threads);
+    //let pool = ThreadPool::new(max_threads);
 
     let parsed_data = parse(RAW_DATA);
     let downloadthreads_data = parsed_data.clone();
