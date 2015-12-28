@@ -3,30 +3,32 @@
 This project aims to provide a gui to allow users to select and download files from the [free-programming-books](https://github.com/vhf/free-programming-books) repository (currently only supporting the english version) in parallel.
 
 ### Features (very much WIP)
-- [x] parser for github page
-    - [x] page -> list of categories of downloads
-- [ ] gtk gui
-    - [x] adequate directory structure
-    - [x] fairly easily themable
-    - [ ] swappable themes while in gui
-    - [ ] categories on side
-    - [ ] list of downloads
-        - [ ] name
-        - [ ] progress bar
-        - [ ] ETA
-        - [ ] speed (use XiB notation)
-- [ ] parallel downloads
-    - [ ] thread pool based
-    - [ ] number of threads changeable while executing
-    - [ ] pausable
-    - [ ] low cpu usage
-    - [ ] speed should be at max possible
+- parser for github page ☑
+    - page -> list of categories of downloads ☑
+- gtk gui ☐
+    - adequate directory structure ☑
+    - fairly easily themable ☑
+    - swappable themes while in gui ☐
+    - categories on side ☐
+    - list of downloads ☐
+        - name ☐
+        - progress bar ☐
+        - ETA ☐
+        - speed (use XiB notation) ☐
+- parallel downloads ☐
+    - thread pool based ☐
+    - number of threads changeable while executing ☐
+    - pausable ☐
+    - low cpu usage ☐
+    - speed should be at max possible ☐
     - Optional - if available, use coroutines
-- [ ] logging
-    - [ ] write all errors to logfile
+- logging ☐
+    - write all errors to logfile ☐
 
 ### Architecture
 
+<!--  ☐
+ ☑-->
 
 <!--* enabled enum -> -->
 	<!--* Enabled(progressamnt) -> on download check if progressamnt is 100 -> do not redownload-->
