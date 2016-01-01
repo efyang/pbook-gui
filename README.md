@@ -42,7 +42,7 @@ This project aims to provide a gui to allow users to select and download files f
         +------------>+  GUI/Downloader  <------------+ Update | |
         |             |   Comm Handler   |            | Channel| |
  (main  |             |                  +----+       +--------+ |
-becomes |             +----------^--^----+    |                  |
+becomes |             +----------+--^----+    |                  |
   GUI)  |                        |  |         |    +-------------+-+
         |                        |  |         |    | Channel with  |
      +--v--+    +--------------+ |  |         |    |  individual   |
@@ -51,24 +51,40 @@ becomes |             +----------^--^----+    |                  |
      |     +--->UI Command Channel+-+              |  change dir)  |
      +-----+   +------------------+                +---------------+
 ```
+
+* All channels should use normal std builtin mpsc channels unless they become a bottleneck, otherwise use comm::spsc
+
+##### GUI
+* Tree view for representation of the categories
+* RadioBox of downloads
+    * Right click on each item -> Context Menu with pause/resume/disable
+
 ##### Download ThreadPool
 ```
-                         +------+ +----------------+
-                     +-->+Thread+-+Job Recv Channel<-+
-                     |   +------+ +----------------+ |
-            Initial  |                               |
-+---------+  Spawn   |   +------+ +----------------+ |
+     +-----------+----------+
+     |           |          |
++----v-------+   |       +--+---+ +----------------+
+|Status Recv +---------->+Thread+-+Job Recv Channel<-+
++----+-------+   +-----+ +------+ +----------------+ |
+     |      Initial  | +-----|                       |
++----v----+  Spawn   | | +------+ +----------------+ |
 |Scheduler+------------->+Thread+-+Job Recv Channel<-+
-+----+----+          |   +------+ +----------------+ |
-     |               |                               |
++----+----+          | | +------+ +----------------+ |
+     |               | +-----|                       |
      |               |   +------+ +----------------+ |
      |               +-->+Thread+-+Job Recv Channel<-+
      |                   +------+ +----------------+ |
      |                                               |
      +-----------------------------------------------+
          Jobs/Commands sent to individual threads
-
 ```
+* Job threads are initially spawned by the scheduler
+* Scheduler has list of Downloads, and if there are idle threads it sends it to that  thread
+* Scheduler maintains HashMap of all threadids (Maybe use a Vec with preset capacity)
+    * References: Handle to job channel
+* Scheduler maintains HashMap of idle threadids
+    * References: Handle to job channel
+* All threads have access to status recv channel, and send threadid when done with their job
 
 <!--  ☐
  ☑-->
@@ -92,6 +108,4 @@ becomes |             +----------^--^----+    |                  |
 	* max 4 parallel downloads/maximum os threads -> whichever is smaller
 	* threadpool is Hashmap<thread, bool> (bool is whether working or not)
 	* Check for open threads on each gui update loop
-
-* Have gtktheme file that specifies a gtk theme, on start read and then combine with gtk.css and then parse -- use main git branch for feature
 -->
