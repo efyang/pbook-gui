@@ -28,7 +28,7 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
         } else {
             match get_item_info(entry) {
                 Some(data) => {
-                    let dl = Download::new(data.0, data.1);
+                    let dl = Download::new(&data.0, &data.1);
                     category.add_download(dl);
                 }
                 None => {}

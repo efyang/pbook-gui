@@ -3,12 +3,6 @@ use hyper::header::ContentLength;
 use std::time::Duration;
 use std::hash::{Hash, Hasher, SipHasher};
 
-// #[cfg(unix)]
-// const FILE_SEP: &'static str = "/";
-
-// #[cfg(windows)]
-// const FILE_SEP: &'static str = "\\";
-
 #[derive(Debug, Clone)]
 pub struct Category {
     name: String,
@@ -23,7 +17,7 @@ impl Category {
         }
     }
 
-    pub fn get_name(&self) -> &String {
+    pub fn get_name(&self) -> &str {
         &self.name
     }
 
@@ -47,7 +41,7 @@ impl Category {
     }
 }
 
-pub fn get_dl_id(name: String, url: String) -> u64 {
+pub fn get_dl_id(name: &str, url: &str) -> u64 {
     let mut hasher = SipHasher::new();
     format!("{}{}", name, url).hash(&mut hasher);
     hasher.finish()
@@ -64,11 +58,11 @@ pub struct Download {
 }
 
 impl Download {
-    pub fn new(name: String, url: String) -> Download {
+    pub fn new(name: &str, url: &str) -> Download {
         // id is siphash of name + url
         Download {
-            name: name.clone(),
-            url: url.clone(),
+            name: name.to_string(),
+            url: url.to_string(),
             enabled: false,
             dlinfo: None,
             id: get_dl_id(name, url),
