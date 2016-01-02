@@ -1,4 +1,4 @@
-use download::*;
+pub use download::*;
 
 // pub fn parse(data: &str) -> Vec<Vec<Download>> {
 pub fn parse(data: &str) -> Vec<Category> {

@@ -31,7 +31,7 @@ This project aims to provide a gui to allow users to select and download files f
 ##### General
 ```
 +---------------+
-|               |                      spawn         +------------+
+|               |                                    +------------+
 |  Main Thread  |               +------------------->+  Download  |
 |               |               |                    | ThreadPool |
 +-------+-------+               |                    +-----+-----^+
@@ -53,38 +53,12 @@ becomes |             +----------+--^----+    |                  |
 ```
 
 * All channels should use normal std builtin mpsc channels unless they become a bottleneck, otherwise use comm::spsc
+* Thread number unchangeable atm
 
 ##### GUI
 * Tree view for representation of the categories
 * RadioBox of downloads
     * Right click on each item -> Context Menu with pause/resume/disable
-
-##### Download ThreadPool
-```
-     +-----------+----------+
-     |           |          |
-+----v-------+   |       +--+---+ +----------------+
-|Status Recv +---------->+Thread+-+Job Recv Channel<-+
-+----+-------+   +-----+ +------+ +----------------+ |
-     |      Initial  | +-----|                       |
-+----v----+  Spawn   | | +------+ +----------------+ |
-|Scheduler+------------->+Thread+-+Job Recv Channel<-+
-+----+----+          | | +------+ +----------------+ |
-     |               | +-----|                       |
-     |               |   +------+ +----------------+ |
-     |               +-->+Thread+-+Job Recv Channel<-+
-     |                   +------+ +----------------+ |
-     |                                               |
-     +-----------------------------------------------+
-         Jobs/Commands sent to individual threads
-```
-* Job threads are initially spawned by the scheduler
-* Scheduler has list of Downloads, and if there are idle threads it sends it to that  thread
-* Scheduler maintains HashMap of all threadids (Maybe use a Vec with preset capacity)
-    * References: Handle to job channel
-* Scheduler maintains HashMap of idle threadids
-    * References: Handle to job channel
-* All threads have access to status recv channel, and send threadid when done with their job
 
 <!--  ☐
  ☑-->

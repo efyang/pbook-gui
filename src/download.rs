@@ -54,7 +54,7 @@ pub struct Download {
     enabled: bool,
     dlinfo: Option<DownloadInfo>, /* optional depending on whether
                                    * its currently being downloaded */
-    id: u64,
+    pub id: u64,
 }
 
 impl Download {
