@@ -56,6 +56,10 @@ impl Category {
         // default if not found
         Err(format!("No such download id {} exists.", download_id))
     }
+
+    pub fn get_downloads(&self) -> &[Download] {
+        &self.downloads
+    }
 }
 
 pub fn get_dl_id(name: &str, url: &str) -> u64 {

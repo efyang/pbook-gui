@@ -26,12 +26,13 @@ fn main() {
     let downloadthreads_data = parsed_data.clone();
 
     // initialize the channels between gui and comm handler
-    let (gui_update_send, gui_update_recv) = channel::<Vec<Category>>();
+    let (gui_update_send, gui_update_recv) = channel::<Vec<Download>>();
     let (gui_cmd_send, gui_cmd_recv) = channel::<String>();
     let commhandler_channels = (gui_update_send, gui_cmd_recv);
 
     let mut comm_handler = CommHandler::new(threads,
-                                            downloadthreads_data,
+                                            //downloadthreads_data,
+                                            Vec::new(),
                                             commhandler_channels);
 
     thread::spawn(move || {
