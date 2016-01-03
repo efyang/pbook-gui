@@ -2,7 +2,7 @@
 
 This project aims to provide a gui to allow users to select and download files from the [free-programming-books](https://github.com/vhf/free-programming-books) repository (currently only supporting the english version) in parallel.
 
-# FIGURE OUT WHAT KIND OF DATA EACH CHANNEL USES
+#### FIGURE OUT WHAT KIND OF DATA EACH CHANNEL USES
 
 ### Features (very much WIP)
 - parser for github page ☑
