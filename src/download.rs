@@ -31,13 +31,30 @@ impl Category {
         }
     }
 
-    pub fn begin_download(&mut self, download_id: &u64) {
+    pub fn begin_download(&mut self, download_id: &u64) -> Result<(), String> {
+        let mut exists = false;
         for dl in self.downloads.iter_mut() {
             if &dl.id == download_id {
                 dl.start_download();
+                exists = true;
                 break;
             }
         }
+        if exists {
+            Ok(())
+        } else {
+            Err(format!("No such download id {} exists.", download_id))
+        }
+    }
+
+    pub fn increment_download_progress(&mut self, download_id: &u64, increment: usize) -> Result<(), String> {
+        for dl in self.downloads.iter_mut() {
+            if &dl.id == download_id {
+                return dl.increment_progress(increment);
+            }
+        }
+        // default if not found
+        Err(format!("No such download id {} exists.", download_id))
     }
 }
 
@@ -69,6 +86,15 @@ impl Download {
         }
     }
 
+    pub fn increment_progress(&mut self, increment: usize) -> Result<(), String> {
+        if let Some(ref mut dlinfo) = self.dlinfo {
+            dlinfo.increment_progress(increment);
+            Ok(())
+        } else {
+            Err("Progress cannot be incremented because it is not downloading.".to_string())
+        }
+    }
+
     pub fn is_downloading(&self) -> bool {
         self.dlinfo.is_some()
     }
@@ -80,10 +106,19 @@ impl Download {
     pub fn start_download(&mut self) {
         self.dlinfo = Some(DownloadInfo::new());
     }
+
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn get_url(&self) -> &str {
+        &self.url
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct DownloadInfo {
+    failed: bool,
     progress: usize,
     total: usize,
     elapsed: Duration,
@@ -92,6 +127,7 @@ pub struct DownloadInfo {
 impl DownloadInfo {
     pub fn new() -> DownloadInfo {
         DownloadInfo {
+            failed: false,
             progress: 0,
             total: 0,
             elapsed: Duration::new(0, 0),
@@ -100,9 +136,18 @@ impl DownloadInfo {
 
     pub fn with_total(total: usize) -> DownloadInfo {
         DownloadInfo {
+            failed: false,
             progress: 0,
             total: total,
             elapsed: Duration::new(0, 0),
         }
+    }
+
+    pub fn get_progress(&self) -> usize {
+        self.progress
+    }
+
+    pub fn increment_progress(&mut self, increment: usize) {
+        self.progress += increment;
     }
 }

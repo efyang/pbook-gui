@@ -1,4 +1,4 @@
-#![allow(dead_code, unused_imports, unused_attributes)]
+#![allow(dead_code, unused_imports, unused_attributes, unused_variables)]
 #![feature(convert)]
 extern crate hyper;
 extern crate gtk;
@@ -24,12 +24,15 @@ fn main() {
     let threads = num_cpus::get();
     let parsed_data: Vec<Category> = parse(RAW_DATA);
     let downloadthreads_data = parsed_data.clone();
-    
+
     // initialize the channels between gui and comm handler
     let (gui_update_send, gui_update_recv) = channel::<Vec<Category>>();
     let (gui_cmd_send, gui_cmd_recv) = channel::<String>();
- 
-    let mut comm_handler = CommHandler::new(threads, downloadthreads_data);
+    let commhandler_channels = (gui_update_send, gui_cmd_recv);
+
+    let mut comm_handler = CommHandler::new(threads,
+                                            downloadthreads_data,
+                                            commhandler_channels);
 
     thread::spawn(move || {
         loop {
@@ -38,5 +41,5 @@ fn main() {
     });
 
     // start gtk gui
-    gui::gui(parsed_data);
+    gui::gui(parsed_data, gui_update_recv, gui_cmd_send);
 }
