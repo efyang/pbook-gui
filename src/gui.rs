@@ -22,7 +22,7 @@ const GTK_THEME_CFG: &'static str = "theme.txt";
 
 pub fn gui(data: Vec<Category>,
            update_recv_channel: Receiver<Vec<Download>>,
-           command_send_channel: Sender<String>) {
+           command_send_channel: Sender<(String, Option<u64>)>) {
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
         return;

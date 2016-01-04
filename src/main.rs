@@ -27,7 +27,7 @@ fn main() {
 
     // initialize the channels between gui and comm handler
     let (gui_update_send, gui_update_recv) = channel::<Vec<Download>>();
-    let (gui_cmd_send, gui_cmd_recv) = channel::<String>();
+    let (gui_cmd_send, gui_cmd_recv) = channel::<(String, Option<u64>)>();
     let commhandler_channels = (gui_update_send, gui_cmd_recv);
 
     let mut comm_handler = CommHandler::new(threads,

@@ -9,16 +9,16 @@ pub struct CommHandler {
     // sends the new downloads for the gui to update
     // since downloads are the only thing being updated
     gui_update_send: Sender<Vec<Download>>,
-    gui_cmd_recv: Receiver<String>,
+    gui_cmd_recv: Receiver<(String, Option<u64>)>,
     // dlid, optional string if error message
-    threadpool_progress_recv: Receiver<(u64, Option<String>)>,
-    threadpool_cmd_send: Vec<Sender<(String, Option<String>)>>,
+    threadpool_progress_recv: Receiver<Result<u64, String>>,
+    threadpool_cmd_send: Vec<Sender<(String, Option<u64>)>>,
 }
 
-impl CommHandler{
+impl CommHandler {
     pub fn new(basethreads: usize,
                start_data: Vec<Download>,
-               guichannels: (Sender<Vec<Download>>, Receiver<String>))
+               guichannels: (Sender<Vec<Download>>, Receiver<(String, Option<u64>)>))
                -> CommHandler {
         let (progress_s, progress_r) = channel();
 
@@ -36,27 +36,19 @@ impl CommHandler{
     pub fn update(&mut self) {
         // handle gui cmd
         match self.gui_cmd_recv.try_recv() {
-            Ok(cmd) => {
-                
-            },
-            Err(e) => {
-                
-            },
+            Ok(cmd) => {}
+            Err(e) => {}
         }
-        
+
         // handle threadpool message
         match self.threadpool_progress_recv.try_recv() {
-            Ok(dlid) => {
-                
-            }
-            Err(e) => {
-                
-            },
+            Ok(dlid) => {}
+            Err(e) => {}
         }
 
         // start execution of any jobs that exist
         if !self.jobs.is_empty() {
-            
+
         }
         unimplemented!()
     }
