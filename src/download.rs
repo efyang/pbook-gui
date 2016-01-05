@@ -3,6 +3,20 @@ use hyper::header::ContentLength;
 use std::time::Duration;
 use std::hash::{Hash, Hasher, SipHasher};
 
+pub trait ToDownloads {
+    fn to_downloads(&self) -> Vec<Download>;
+}
+
+impl ToDownloads for Vec<Category> {
+    fn to_downloads(&self) -> Vec<Download> {
+        let mut downloads = Vec::new();
+        for category in self.iter() {
+            downloads.extend(category.downloads().iter().cloned());
+        }
+        downloads
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Category {
     name: String,
@@ -57,7 +71,7 @@ impl Category {
         Err(format!("No such download id {} exists.", download_id))
     }
 
-    pub fn get_downloads(&self) -> &[Download] {
+    pub fn downloads(&self) -> &[Download] {
         &self.downloads
     }
 }

@@ -8,6 +8,7 @@ extern crate threadpool;
 
 use std::env;
 use std::thread;
+use std::time::Duration;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
 mod download;
@@ -31,13 +32,14 @@ fn main() {
     let commhandler_channels = (gui_update_send, gui_cmd_recv);
 
     let mut comm_handler = CommHandler::new(threads,
-                                            //downloadthreads_data,
-                                            Vec::new(),
+                                             downloadthreads_data.to_downloads(),
+                                            //Vec::new(),
                                             commhandler_channels);
 
     thread::spawn(move || {
         loop {
             comm_handler.update();
+            thread::sleep(Duration::from_millis(0));
         }
     });
 
