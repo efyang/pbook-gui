@@ -1,4 +1,4 @@
-use download::*;
+use data::*;
 use gtk;
 use gdk;
 use gtk::traits::*;

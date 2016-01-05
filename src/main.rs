@@ -11,7 +11,7 @@ use std::thread;
 use std::time::Duration;
 use std::sync::mpsc::{channel, Sender, Receiver};
 
-mod download;
+mod data;
 mod include;
 mod gui;
 mod parse;

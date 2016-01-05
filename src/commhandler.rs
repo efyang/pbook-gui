@@ -1,4 +1,4 @@
-use download::*;
+use data::*;
 use std::sync::mpsc::{channel, Sender, Receiver, SendError};
 use std::collections::HashMap;
 use std::thread;
