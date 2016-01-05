@@ -3,6 +3,7 @@ use std::sync::mpsc::{channel, Sender, Receiver, SendError};
 use std::collections::HashMap;
 use std::thread;
 use threadpool::ThreadPool;
+use download::*;
 
 pub struct CommHandler {
     threadpool: ThreadPool,
@@ -92,7 +93,6 @@ impl CommHandler {
     fn broadcast(&self,
                  msg: (String, Option<u64>))
                  -> Result<(), SendError<(String, Option<u64>)>> {
-
         for channel in self.threadpool_cmd_send.iter() {
             let sendresult = channel.send(msg.clone());
             if sendresult.is_err() {

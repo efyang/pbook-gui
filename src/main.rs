@@ -16,6 +16,7 @@ mod include;
 mod gui;
 mod parse;
 mod commhandler;
+mod download;
 
 use commhandler::*;
 use parse::*;
