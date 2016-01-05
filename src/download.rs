@@ -7,7 +7,7 @@ use std::path::Path;
 use std::env::current_exe;
 use hyper::client::Client;
 
-pub const MILLI_TIMEMOUT: usize = 500;
+pub const MILLI_TIMEMOUT: u64 = 500;
 
 pub fn download_url_default(url: &str) {
     download_url(url, get_url_filename(url).unwrap());
