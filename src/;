@@ -12,7 +12,8 @@ enum DownloadUpdate {
     Amount(usize),
 }
 
-type TpoolProgressMsg = (u64, DownloadUpdate);
+type TpoolProgressData = Result<DownloadUpdate, String>;
+type TpoolProgressMsg = (u64, TpoolProgressData);
 
 pub struct CommHandler {
     threadpool: ThreadPool,
@@ -76,7 +77,7 @@ impl CommHandler {
 
             self.threadpool.execute(move || {
                 for _ in 0..1000000 {
-                    progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();
+                    progress_sender.send((job.id, Ok(DownloadUpdate::Amount(1)))).unwrap();
                     // need sleep or there will be a memory overflow -> read more than one byte?
                     thread::sleep_ms(2);
                 }
@@ -86,17 +87,16 @@ impl CommHandler {
     }
 
     fn handle_progress_msg(&mut self, progress: TpoolProgressMsg) {
-        let dlid = progress.0;
-        // self.datacache.increment(dlid, 1);
         match progress.1 {
-            DownloadUpdate::Amount(dlamnt) => {
+            Ok(dlid) => {
                 // add to cache
-                self.datacache.increment(dlid, dlamnt);
+                self.datacache.increment(dlid, 1);
             }
-            DownloadUpdate::Message(message) => {
-                // work on message handling
+            Err(ref e) => {
+                // work on error handling
             }
         }
+        // drop(progress);
         self.free_threads += 1;
     }
 
