@@ -126,12 +126,13 @@ fn setup_theme(current_working_dir: &Path,
                         StyleContext::add_provider_for_screen(&screen,
                                                               &style_provider,
                                                               STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+                        println!("default success");
                     } else {
-                        println!("here1");
+                        println!("here1 default");
                         no_css_error();
                     }
                 } else {
-                    println!("here2");
+                    println!("here2 default");
                     no_css_error();
                 }
             } else if secondary_config_path.exists() {
@@ -141,12 +142,14 @@ fn setup_theme(current_working_dir: &Path,
                         StyleContext::add_provider_for_screen(&screen,
                                                               &style_provider,
                                                               STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+                        println!("secondary success");
                     } else {
-                        println!("here1");
+                        println!("here1 secondary");
                         no_css_error();
                     }
                 } else {
-                    println!("here2");
+                    CssProvider::load_from_data(&new_css).expect("println");
+                    println!("here2 secondary");
                     no_css_error();
                 }
             } else {

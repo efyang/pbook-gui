@@ -87,7 +87,6 @@ impl CommHandler {
 
     fn handle_progress_msg(&mut self, progress: TpoolProgressMsg) {
         let dlid = progress.0;
-        // self.datacache.increment(dlid, 1);
         match progress.1 {
             DownloadUpdate::Amount(dlamnt) => {
                 // add to cache
