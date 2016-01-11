@@ -8,7 +8,11 @@ use std::env::current_exe;
 use hyper::client::Client;
 
 pub const MILLI_TIMEMOUT: u64 = 500;
-
+// NOTE
+// try creating a byte iterator first, and then using next on the iterator
+// this would allow for changing of the bytes to read on each iteration
+// make a Downloader struct which would allow for storage of download path and buffer size
+// url, download path, buffer size
 pub fn download_url_default(url: &str) {
     download_url(url, get_url_filename(url).unwrap());
 }
