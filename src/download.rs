@@ -27,14 +27,12 @@ pub fn download_url(url: &str, fileout: &str) {
     client.set_read_timeout(Some(Duration::from_millis(MILLI_TIMEMOUT)));
     let mut outfile = BufWriter::new(File::create(filename).unwrap());
     let mut stream = client.get(url).send().unwrap();
-    let mut buf: [u8; 1] = [0; 1];
-    //let mut buf: [u8; 16] = [0; 16];
+    let mut buf: [u8; 16] = [0; 16];
     loop {
         match stream.read(&mut buf) {
             Ok(0) => break,
             Ok(_) => {
-                outfile.write(&buf).unwrap();
-                //outfile.write(&buf[..n]).unwrap();
+                outfile.write(&buf[..n]).unwrap();
             }
             Err(e) => panic!(e),
         }
