@@ -4,15 +4,9 @@ use std::collections::HashMap;
 use std::thread;
 use threadpool::ThreadPool;
 use download::*;
+use std::time::Duration;
 
 const GUI_UPDATE_TIME: usize = 10;
-
-enum DownloadUpdate {
-    Message(String),
-    Amount(usize),
-}
-
-type TpoolProgressMsg = (u64, DownloadUpdate);
 
 pub struct CommHandler {
     threadpool: ThreadPool,
@@ -23,12 +17,12 @@ pub struct CommHandler {
     // sends the new downloads for the gui to update
     // since downloads are the only thing being updated
     gui_update_send: Sender<Vec<Download>>,
-    gui_cmd_recv: Receiver<(String, Option<u64>)>,
+    gui_cmd_recv: Receiver<GuiCmdMsg>,
     // dlid, optional string if error message
     // how to determine whether a thread is done?
     threadpool_progress_recv: Receiver<TpoolProgressMsg>,
     threadpool_progress_send: Sender<TpoolProgressMsg>,
-    threadpool_cmd_send: Vec<Sender<(String, Option<u64>)>>,
+    threadpool_cmd_send: Vec<Sender<TpoolCmdMsg>>,
 }
 
 impl CommHandler {
@@ -69,16 +63,23 @@ impl CommHandler {
 
         // start execution of any jobs that exist
         if !self.jobs.is_empty() && self.free_threads > 0 {
-            let job = self.jobs.pop().unwrap();
+            //let job = self.jobs.pop().unwrap();
+            let mut job = self.jobs.pop().unwrap();
+            job.start_download();
             let progress_sender = self.threadpool_progress_send.clone();
             let (tchan_cmd_s, tchan_cmd_r) = channel();
             self.threadpool_cmd_send.push(tchan_cmd_s);
-
+            let mut downloader = Downloader::new(job, tchan_cmd_r, progress_sender);
             self.threadpool.execute(move || {
                 for _ in 0..1000000 {
-                    progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();
+                    //progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();
                     // need sleep or there will be a memory overflow -> read more than one byte?
-                    thread::sleep_ms(2);
+                    match downloader.update() {
+                        Ok(_) => {},
+                        Err(e) => panic!(e),
+                    }
+                    
+                    thread::sleep(Duration::from_millis(2));
                 }
             });
             self.free_threads -= 1;

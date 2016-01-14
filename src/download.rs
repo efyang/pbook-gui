@@ -1,18 +1,43 @@
+use std::sync::mpsc::{Sender, Receiver};
 use std::io::prelude::*;
 use std::fs::File;
 use std::fs;
 use std::io::BufWriter;
 use std::time::Duration;
-use std::path::Path;
 use std::env::current_exe;
 use hyper::client::Client;
+use data::*;
 
 pub const MILLI_TIMEMOUT: u64 = 500;
 // NOTE
-// try creating a byte iterator first, and then using next on the iterator
-// this would allow for changing of the bytes to read on each iteration
 // make a Downloader struct which would allow for storage of download path and buffer size
 // url, download path, buffer size
+
+pub struct Downloader {
+    url: String,
+    download_path: PathBuf,
+    cmd_recv: Receiver<TpoolCmdMsg>,
+    progress_send: Sender<TpoolProgressMsg>,
+}
+
+impl Downloader {
+    pub fn new(download: Download,
+               cmd_recv: Receiver<TpoolCmdMsg>,
+               progress_send: Sender<TpoolProgressMsg>)
+               -> Downloader {
+        Downloader {
+            url: download.get_url().to_string(),
+            download_path: download.get_path().to_owned(),
+            cmd_recv: cmd_recv,
+            progress_send: progress_send,
+        }
+    }
+
+    pub fn update(&mut self) -> Result<(), String> {
+        unimplemented!();
+    }
+}
+
 pub fn download_url_default(url: &str) {
     download_url(url, get_url_filename(url).unwrap());
 }
@@ -31,7 +56,7 @@ pub fn download_url(url: &str, fileout: &str) {
     loop {
         match stream.read(&mut buf) {
             Ok(0) => break,
-            Ok(_) => {
+            Ok(n) => {
                 outfile.write(&buf[..n]).unwrap();
             }
             Err(e) => panic!(e),

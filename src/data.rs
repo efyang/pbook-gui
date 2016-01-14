@@ -2,6 +2,16 @@ use hyper::client::*;
 use hyper::header::ContentLength;
 use std::time::Duration;
 use std::hash::{Hash, Hasher, SipHasher};
+pub use std::path::{Path, PathBuf};
+
+pub enum DownloadUpdate {
+    Message(String),
+    Amount(usize),
+}
+
+pub type TpoolProgressMsg = (u64, DownloadUpdate);
+pub type GuiCmdMsg = (String, Option<u64>);
+pub type TpoolCmdMsg = GuiCmdMsg;
 
 pub trait ToDownloads {
     fn to_downloads(&self) -> Vec<Download>;
@@ -132,6 +142,10 @@ impl Download {
     pub fn get_url(&self) -> &str {
         &self.url
     }
+
+    pub fn get_path(&self) -> PathBuf {
+        self.clone().dlinfo.unwrap().get_path()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -140,6 +154,7 @@ pub struct DownloadInfo {
     progress: usize,
     total: usize,
     elapsed: Duration,
+    path: PathBuf,
 }
 
 impl DownloadInfo {
@@ -149,6 +164,7 @@ impl DownloadInfo {
             progress: 0,
             total: 0,
             elapsed: Duration::new(0, 0),
+            path: PathBuf::new(),
         }
     }
 
@@ -158,6 +174,7 @@ impl DownloadInfo {
             progress: 0,
             total: total,
             elapsed: Duration::new(0, 0),
+            path: PathBuf::new(),
         }
     }
 
@@ -167,5 +184,9 @@ impl DownloadInfo {
 
     pub fn increment_progress(&mut self, increment: usize) {
         self.progress += increment;
+    }
+
+    fn get_path(&self) -> PathBuf {
+        self.path.to_path_buf()
     }
 }

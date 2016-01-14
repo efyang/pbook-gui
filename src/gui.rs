@@ -5,7 +5,6 @@ use gtk::traits::*;
 use gtk::signal::Inhibit;
 use gtk::{CssProvider, StyleContext, STYLE_PROVIDER_PRIORITY_APPLICATION};
 use gdk::screen::Screen;
-use std::path::{Path, PathBuf};
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
