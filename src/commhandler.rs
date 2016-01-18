@@ -69,7 +69,7 @@ impl CommHandler {
             let progress_sender = self.threadpool_progress_send.clone();
             let (tchan_cmd_s, tchan_cmd_r) = channel();
             self.threadpool_cmd_send.push(tchan_cmd_s);
-            let mut downloader = Downloader::new(job, tchan_cmd_r, progress_sender);
+            let mut downloader = Downloader::new(job, tchan_cmd_r, progress_sender, Path::new("./testing"));
             self.threadpool.execute(move || {
                 for _ in 0..1000000 {
                     //progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();

@@ -99,7 +99,7 @@ pub struct Download {
     enabled: bool,
     dlinfo: Option<DownloadInfo>, /* optional depending on whether
                                    * its currently being downloaded */
-    pub id: u64,
+    id: u64,
 }
 
 impl Download {
@@ -145,6 +145,10 @@ impl Download {
 
     pub fn get_path(&self) -> PathBuf {
         self.clone().dlinfo.unwrap().get_path()
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id
     }
 }
 
