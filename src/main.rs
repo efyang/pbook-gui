@@ -3,6 +3,7 @@
 extern crate hyper;
 extern crate gtk;
 extern crate gdk;
+extern crate glib;
 extern crate num_cpus;
 extern crate threadpool;
 

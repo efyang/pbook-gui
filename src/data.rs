@@ -143,6 +143,10 @@ impl Download {
         &self.url
     }
 
+    pub fn get_dlinfo(&self) -> &Option<DownloadInfo> {
+        &self.dlinfo
+    }
+
     pub fn get_path(&self) -> PathBuf {
         self.clone().dlinfo.unwrap().get_path()
     }
@@ -184,6 +188,10 @@ impl DownloadInfo {
 
     pub fn get_progress(&self) -> usize {
         self.progress
+    }
+
+    pub fn get_total(&self) -> usize {
+        self.total
     }
 
     pub fn increment_progress(&mut self, increment: usize) {

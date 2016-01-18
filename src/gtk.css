@@ -1,3 +1,4 @@
 GtkProgressBar {
-    -GtkProgressBar-min-horizontal-bar-height: 20px;
+    -GtkProgressBar-min-horizontal-bar-height: 15px;
+    -GtkProgressBar-min-horizontal-bar-width: 300px;
 }
