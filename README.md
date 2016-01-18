@@ -55,7 +55,7 @@ becomes |             +----------+--^----+    |                  |
 ```
 
 * All channels should use normal std builtin mpsc channels unless they become a bottleneck, otherwise use comm::spsc
-* Thread number unchangeable atm
+* ~~Thread number unchangeable atm~~ Functionality added with [this PR](https://github.com/frewsxcv/rust-threadpool/pull/17)
 
 ##### GUI
 * Tree view for representation of the categories
