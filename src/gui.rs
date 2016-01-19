@@ -11,6 +11,7 @@ use std::io::prelude::*;
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashMap;
 use std::iter;
+use glib::Type;
 
 #[cfg(windows)]
 const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
@@ -62,13 +63,22 @@ pub fn gui(data: Vec<Category>,
         download.start_download();
     }
     let mut infoitems = initial_render(&downloads);
-
+    // main rendering
     let button = gtk::Button::new_with_label("Click me!").unwrap();
     let listbox = gtk::ListBox::new().unwrap();
 
     for item in infoitems {
         println!("{:?}", item);
     }
+
+    let treeview = gtk::TreeView::new().unwrap();
+    // name, size, progress, speed, eta
+    let column_types = [Type::String, Type::String, Type::F32, Type::String, Type::String];
+    let infostore = gtk::ListStore::new(&column_types).unwrap();
+    let infomodel = infostore.get_model().unwrap();
+
+    treeview.set_model(&infomodel);
+    treeview.set_headers_visible(true);
 
     let scroll = gtk::ScrolledWindow::new(None, None).unwrap();
     scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
@@ -87,8 +97,22 @@ pub fn gui(data: Vec<Category>,
     gtk::main();
 
 }
-//
-//name, size, progress, speed, eta
+// glib::object::IsA ?
+trait AddCellRenderer {
+    fn add_cell_renderer<T>(&self, cell: &T, fill: bool, attribute_type: &str, attribute_value: usize) 
+        where T: gtk::CellRenderer;
+}
+
+impl AddCellRenderer for gtk::TreeView {
+    fn add_cell_renderer<T>(&self, cell: &T, fill: bool, attribute_type: &str, attribute_value: usize) where T: gtk::CellRenderer {
+        let column = gtk::TreeViewColumn::new().unwrap();
+        column.pack_start(cell, fill);
+        column.add_attribute(cell, attribute_type, attribute_value);
+        self.append_column(&column);
+    }
+}
+
+// name, size, progress, speed, eta
 fn initial_render(data: &Vec<Download>) -> HashMap<u64, (String, String, f32, String, String)> {
     let mut items = HashMap::new();
     for dl in data.iter() {
@@ -98,7 +122,7 @@ fn initial_render(data: &Vec<Download>) -> HashMap<u64, (String, String, f32, St
                 let name = dl.get_name().to_string();
                 let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
                 let percent = dlinfo.get_percentage();
-                let speed = format!("{}/s", dlinfo.get_speed().convert_to_byte_units(0));
+                let speed = format!("{} /s", dlinfo.get_speed().convert_to_byte_units(0));
                 let eta = dlinfo.get_eta().to_string();
                 items.insert(dlid, (name, size, percent, speed, eta));
             },
