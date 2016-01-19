@@ -89,19 +89,21 @@ pub fn gui(data: Vec<Category>,
     gtk::main();
 
 }
-
-fn initial_render(data: &Vec<Download>) -> HashMap<u64, gtk::Box> {
+//
+//name, size, progress, speed, eta
+fn initial_render(data: &Vec<Download>) -> HashMap<u64, (String, String, f32, String, String)> {
     let mut boxes = HashMap::new();
     for dl in data.iter() {
         match dl.get_dlinfo() {
             &Some(ref dlinfo) => {
                 let dlid = dl.id();
-                let bar = make_bar(dlinfo);
-                let infobox = gtk::Box::new(Orientation::Horizontal, 0).unwrap();
-                let namelabel = make_name_label(&truncate_str(dl.get_name(), 90));
-                infobox.pack_start(&namelabel, true, true, 0);
-                infobox.add(&bar);
-                boxes.insert(dlid, infobox);
+                let name = dl.get_name();
+                let size = convert_to_byte_units(dl.get_total());
+                let percent = dlinfo.get_percentage();
+                let speed = 
+                //infobox.pack_start(&namelabel, true, true, 0);
+                //infobox.add(&bar);
+                boxes.insert(dlid, );
             },
             &None => {},
         }
@@ -109,30 +111,12 @@ fn initial_render(data: &Vec<Download>) -> HashMap<u64, gtk::Box> {
     boxes
 }
 
-fn truncate_str(s: &str, maxchars: usize) -> String {
-    if s.len() <= maxchars {
-        s.to_string()
-    } else {
-        s[0..maxchars - 3].to_string() + "..."
-    }
+trait ToByteUnits {
+    fn convert_to_byte_units(&self) -> String;
 }
 
-fn make_bar(dlinfo: &DownloadInfo) -> gtk::ProgressBar {
-    let mut bar = gtk::ProgressBar::new().unwrap();
-    let percent = dlinfo.get_progress() as f64/dlinfo.get_total() as f64;
-    bar.set_fraction(percent);
-    //&mut bar as *mut gtk::ProgressBar
-    bar
-}
-
-fn make_download_speed_label(dlinfo: &DownloadInfo) -> gtk::Label {
-    unimplemented!();
-}
-
-fn make_name_label(name: &str) -> gtk::Label {
-    let namelabel = gtk::Label::new(name).unwrap();
-    namelabel.set_halign(gtk::Align::Start);
-    namelabel
+impl ToByteUnits for usize {
+    
 }
 
 fn setup_theme(current_working_dir: &Path,

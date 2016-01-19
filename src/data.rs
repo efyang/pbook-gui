@@ -3,6 +3,9 @@ use hyper::header::ContentLength;
 use std::time::Duration;
 use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
+use time::precise_time_s;
+
+const DOWNLOAD_SPEED_UPDATE_TIME: f64 = 0.1;
 
 pub enum DownloadUpdate {
     Message(String),
@@ -161,6 +164,8 @@ pub struct DownloadInfo {
     failed: bool,
     progress: usize,
     total: usize,
+    recent_progress: usize,
+    recent_starttime: f64,
     elapsed: Duration,
     path: PathBuf,
 }
@@ -171,6 +176,8 @@ impl DownloadInfo {
             failed: false,
             progress: 0,
             total: 0,
+            recent_progress: 0,
+            recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,
             elapsed: Duration::new(0, 0),
             path: PathBuf::new(),
         }
@@ -181,6 +188,8 @@ impl DownloadInfo {
             failed: false,
             progress: 0,
             total: total,
+            recent_progress: 0,
+            recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,
             elapsed: Duration::new(0, 0),
             path: PathBuf::new(),
         }
@@ -196,9 +205,23 @@ impl DownloadInfo {
 
     pub fn increment_progress(&mut self, increment: usize) {
         self.progress += increment;
+        let timenow = precise_time_s();
+        if timenow >= self.recent_progress_clear_time {
+           self.recent_progress = 0;
+           self.recent_progress_clear_time = timenow + DOWNLOAD_SPEED_UPDATE_TIME;
+        }
     }
 
-    fn get_path(&self) -> PathBuf {
+    pub fn get_path(&self) -> PathBuf {
         self.path.to_path_buf()
+    }
+
+    pub fn get_percentage(&self) -> f32 {
+        self.progress as f32/self.total as f32
+    }
+    
+    // to bytes
+    pub fn get_speed(&self) -> usize {
+        (self.recent_progress/DOWNLOAD_SPEED_UPDATE_TIME) as usize
     }
 }

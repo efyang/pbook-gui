@@ -6,6 +6,7 @@ extern crate gdk;
 extern crate glib;
 extern crate num_cpus;
 extern crate threadpool;
+extern crate time;
 
 use std::env;
 use std::thread;
