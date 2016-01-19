@@ -5,6 +5,7 @@ use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
 use time::precise_time_s;
 
+// seconds
 const DOWNLOAD_SPEED_UPDATE_TIME: f64 = 0.1;
 
 pub enum DownloadUpdate {
@@ -165,7 +166,7 @@ pub struct DownloadInfo {
     progress: usize,
     total: usize,
     recent_progress: usize,
-    recent_starttime: f64,
+    recent_progress_clear_time: f64,
     elapsed: Duration,
     path: PathBuf,
 }
@@ -207,8 +208,10 @@ impl DownloadInfo {
         self.progress += increment;
         let timenow = precise_time_s();
         if timenow >= self.recent_progress_clear_time {
-           self.recent_progress = 0;
-           self.recent_progress_clear_time = timenow + DOWNLOAD_SPEED_UPDATE_TIME;
+            self.recent_progress = 0;
+            self.recent_progress_clear_time = timenow + DOWNLOAD_SPEED_UPDATE_TIME;
+        } else {
+            self.recent_progress += increment;
         }
     }
 
@@ -220,8 +223,15 @@ impl DownloadInfo {
         self.progress as f32/self.total as f32
     }
     
-    // to bytes
-    pub fn get_speed(&self) -> usize {
-        (self.recent_progress/DOWNLOAD_SPEED_UPDATE_TIME) as usize
+    // to bytes per second
+    pub fn get_speed(&self) -> f32 {
+        self.recent_progress as f32/DOWNLOAD_SPEED_UPDATE_TIME as f32
+    }
+
+    // to seconds
+    pub fn get_eta(&self) -> usize {
+        let bytes_left = self.total - self.progress;
+        let speed = self.get_speed();
+        (bytes_left as f32/speed) as usize
     }
 }

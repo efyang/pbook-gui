@@ -10,6 +10,7 @@ dependencies = [
  "num_cpus 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "threadpool 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)",
  "tiny-keccak 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
