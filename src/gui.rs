@@ -11,7 +11,7 @@ use std::io::prelude::*;
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashMap;
 use std::iter;
-use glib::Type;
+use glib::{Value, Type};
 
 #[cfg(windows)]
 const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
@@ -65,7 +65,6 @@ pub fn gui(data: Vec<Category>,
     let mut infoitems = initial_render(&downloads);
     // main rendering
     let button = gtk::Button::new_with_label("Click me!");
-    let listbox = gtk::ListBox::new();
 
     for item in infoitems {
         println!("{:?}", item);
@@ -75,13 +74,35 @@ pub fn gui(data: Vec<Category>,
     // name, size, progress, speed, eta
     let column_types = [Type::String, Type::String, Type::F32, Type::String, Type::String];
     let infostore = gtk::ListStore::new(&column_types);
+    treeview.add_text_renderer_column("Name", true, true, false);
+    treeview.add_text_renderer_column("Size", true, true, false);
+    treeview.add_progress_renderer_column("Progress", true, true, false);
+    treeview.add_text_renderer_column("Speed", true, true, false);
+    treeview.add_text_renderer_column("ETA", true, true, false);
+   
+    // placeholder values
+    for _ in 1..10 {
+        let progress = unsafe {
+            let mut progress;
+            progress = Value::new();
+            progress.init(Type::F32);
+            progress.set(&50.0f32);
+            progress
+        };
+        let iter = infostore.append();
+        infostore.set_string(&iter, 0, "Bob");
+        infostore.set_string(&iter, 1, "30 KiB");
+        infostore.set_value(&iter, 2, &progress);
+        infostore.set_string(&iter, 3, "10 KiB/s");
+        infostore.set_string(&iter, 4, "30s");
+    }
 
     treeview.set_model(Some(&infostore));
     treeview.set_headers_visible(true);
-
+ 
     let scroll = gtk::ScrolledWindow::new(None, None);
     scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
-    scroll.add(&listbox);
+    scroll.add(&treeview);
 
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
     vbox.pack_start(&scroll, true, true, 0);
@@ -99,34 +120,46 @@ pub fn gui(data: Vec<Category>,
 
 trait AddCellRenderers {
     fn add_cell_renderer_column<T: IsA<CellRenderer>>(&self,
+                                                      title: &str,
                                                       cell: &T,
                                                       fill: bool,
+                                                      resizable: bool,
+                                                      pack_end: bool,
                                                       attribute_type: &str,
                                                       attribute_value: i32);
-    fn add_text_renderer_column(&self, fill: bool);
-    fn add_progress_renderer_column(&self, fill: bool);
+    fn add_text_renderer_column(&self, title: &str, fill: bool, resizable: bool, pack_end: bool);
+    fn add_progress_renderer_column(&self, title: &str, fill: bool, resizable: bool, pack_end: bool);
 }
 
 impl AddCellRenderers for gtk::TreeView {
     fn add_cell_renderer_column<T: IsA<CellRenderer>>(&self,
+                                                      title: &str,
                                                       cell: &T,
                                                       fill: bool,
+                                                      resizable: bool,
+                                                      pack_end: bool,
                                                       attribute_type: &str,
                                                       attribute_value: i32) {
         let column = gtk::TreeViewColumn::new();
-        column.pack_start(cell, fill);
+        if pack_end {
+            column.pack_end(cell, fill);
+        } else {
+            column.pack_start(cell, fill);
+        }
         column.add_attribute(cell, attribute_type, attribute_value);
+        column.set_title(title);
+        column.set_resizable(resizable);
         self.append_column(&column);
     }
 
-    fn add_text_renderer_column(&self, fill: bool) {
+    fn add_text_renderer_column(&self, title: &str, fill: bool, resizable: bool, pack_end: bool) {
         let cell = gtk::CellRendererText::new();
-        self.add_cell_renderer_column(&cell, fill, "text", 0);
+        self.add_cell_renderer_column(title, &cell, fill, resizable, pack_end, "text", 0);
     }
 
-    fn add_progress_renderer_column(&self, fill: bool) {
+    fn add_progress_renderer_column(&self, title: &str, fill: bool, resizable: bool, pack_end: bool) {
         let cell = gtk::CellRendererProgress::new();
-        self.add_cell_renderer_column(&cell, fill, "value", 1);
+        self.add_cell_renderer_column(title, &cell, fill, resizable, pack_end, "value", 1);
     }
 }
 
