@@ -45,8 +45,12 @@ pub trait Shorten {
 impl Shorten for String {
     fn shorten(&mut self, maxchars: isize) -> String {
         let length = self.len() as isize;
-        self.truncate(minimum(maximum(maxchars - 3, 0), length) as usize);
-        self.clone() + "..."
+        if length > maxchars {
+            self.truncate(minimum(maximum(maxchars - 3, 0), length) as usize);
+            self.clone() + "..."
+        } else {
+            self.clone()
+        }
     }
 }
 

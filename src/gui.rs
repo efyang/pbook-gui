@@ -66,26 +66,32 @@ pub fn gui(data: Vec<Category>,
     // main rendering
     let button = gtk::Button::new_with_label("Click me!");
 
-    let treeview = gtk::TreeView::new();
+    let downloadview = gtk::TreeView::new();
     // name, size, progress, speed, eta
-    let column_types = [Type::String, Type::String, Type::F32, Type::String, Type::String];
-    let infostore = gtk::ListStore::new(&column_types);
-    treeview.add_text_renderer_column("Name", true, true, false, AddMode::PackStart, 0);
-    treeview.add_text_renderer_column("Size", true, true, false, AddMode::PackStart, 1);
-    treeview.add_progress_renderer_column("Progress", true, true, true, AddMode::PackStart, 2);
-    treeview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart, 3);
-    treeview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, 4);
+    let download_column_types = [Type::String, Type::String, Type::F32, Type::String, Type::String];
+    let download_store = gtk::ListStore::new(&download_column_types);
+    downloadview.add_text_renderer_column("Name", true, true, false, AddMode::PackStart, 0);
+    downloadview.add_text_renderer_column("Size", true, true, false, AddMode::PackStart, 1);
+    downloadview.add_progress_renderer_column("Progress", true, true, true, AddMode::PackStart, 2);
+    downloadview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart, 3);
+    downloadview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, 4);
 
     for item in infoitems {
-        infostore.add_download(item.1);
+        download_store.add_download(item.1);
     }
 
-    treeview.set_model(Some(&infostore));
-    treeview.set_headers_visible(true);
+    downloadview.set_model(Some(&download_store));
+    downloadview.set_headers_visible(true);
+
+    // cellrenderertoggle for checkbox in treeview
+    let categoryview = gtk::TreeView::new();
+    let category_column_types = [Type::String];
+    let category_store = gtk::TreeStore::new(&category_column_types);
+
 
     let scroll = gtk::ScrolledWindow::new(None, None);
     scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
-    scroll.add(&treeview);
+    scroll.add(&downloadview);
 
     let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
     vbox.pack_start(&scroll, true, true, 0);
@@ -226,7 +232,8 @@ fn initial_liststore_model(data: &Vec<Download>)
         match dl.get_dlinfo() {
             &Some(ref dlinfo) => {
                 let dlid = dl.id();
-                let name = dl.get_name().to_string().shorten(70);
+                // shorten needed until ellipsize is implemented for CellRendererText
+                let name = dl.get_name().to_string().shorten(50);
                 let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
                 let percent = dlinfo.get_percentage();
                 let speed = format!("{}/s", dlinfo.get_speed().convert_to_byte_units(0));
@@ -239,7 +246,9 @@ fn initial_liststore_model(data: &Vec<Download>)
     items
 }
 
-// places refers to places after decimal point
+fn initial_categorystore_model(data: &Vec<Category>) -> () {
+    unimplemented!();
+}
 
 // useless until the following are regenned:
 // https://github.com/gtk-rs/gtk/blob/master/src/auto/style_context.rs#L36
