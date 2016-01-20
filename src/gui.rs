@@ -3,7 +3,7 @@ use gtk;
 use gdk;
 use gtk::prelude::*;
 use gtk::{Orientation, CssProvider, StyleContext, STYLE_PROVIDER_PRIORITY_APPLICATION, IsA,
-CellRenderer};
+          CellRenderer};
 use gdk::screen::Screen;
 use std::env;
 use std::fs::File;
@@ -39,7 +39,7 @@ pub fn gui(data: Vec<Category>,
         }
     };
     let current_working_dir = current_exe_path.parent()
-        .unwrap_or(Path::new(".."));
+                                              .unwrap_or(Path::new(".."));
     let default_config_path = current_working_dir.join(DEFAULT_GTK_CSS_CONFIG);
     let secondary_config_path = current_working_dir.join(SECONDARY_GTK_CSS_CONFIG);
 
@@ -66,36 +66,36 @@ pub fn gui(data: Vec<Category>,
     // main rendering
     let button = gtk::Button::new_with_label("Click me!");
 
-    //for item in infoitems {
-    //println!("{:?}", item);
-    //}
+    // for item in infoitems {
+    // println!("{:?}", item);
+    // }
 
     let treeview = gtk::TreeView::new();
     // name, size, progress, speed, eta
     let column_types = [Type::String, Type::String, Type::F32, Type::String, Type::String];
     let infostore = gtk::ListStore::new(&column_types);
-    treeview.add_text_renderer_column("Name", true, true, false, AddMode::PackStart);
-    treeview.add_text_renderer_column("Size", true, true, false, AddMode::PackStart);
-    treeview.add_progress_renderer_column("Progress", true, true, true, AddMode::PackStart);
-    treeview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart);
-    treeview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart);
+    treeview.add_text_renderer_column("Name", true, true, false, AddMode::PackStart, 0);
+    treeview.add_text_renderer_column("Size", true, true, false, AddMode::PackStart, 1);
+    treeview.add_progress_renderer_column("Progress", true, true, true, AddMode::PackStart, 2);
+    treeview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart, 3);
+    treeview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, 4);
 
     // placeholder values
-    //for _ in 1..10 {
-    let progress = unsafe {
-        let mut progress;
-        progress = Value::new();
-        progress.init(Type::F32);
-        progress.set(&50.0f32);
-        progress
-    };
-    let iter = infostore.append();
-    //infostore.set_string(&iter, 0, "Bob");
-    //infostore.set_string(&iter, 1, "30 KiB");
-    infostore.set_value(&iter, 4, &progress);
-    //infostore.set_string(&iter, 3, "10 KiB/s");
-    //infostore.set_string(&iter, 4, "30s");
-    //}
+    for _ in 1..10 {
+        let progress = unsafe {
+            let mut progress;
+            progress = Value::new();
+            progress.init(Type::F32);
+            progress.set(&50.0f32);
+            progress
+        };
+        let iter = infostore.append();
+        infostore.set_string(&iter, 0, "Bob");
+        infostore.set_string(&iter, 1, "30 KiB");
+        infostore.set_value(&iter, 2, &progress);
+        infostore.set_string(&iter, 3, "10 KiB/s");
+        infostore.set_string(&iter, 4, "30s");
+    }
 
     treeview.set_model(Some(&infostore));
     treeview.set_headers_visible(true);
@@ -119,11 +119,12 @@ pub fn gui(data: Vec<Category>,
 }
 
 enum AddMode {
-    PackEnd, PackStart
+    PackEnd,
+    PackStart,
 }
 
 trait AddCellRenderers {
-    // addmode 0 -> 
+    // addmode 0 ->
     fn add_cell_renderer_column<T: IsA<CellRenderer>>(&self,
                                                       title: &str,
                                                       cell: &T,
@@ -132,9 +133,21 @@ trait AddCellRenderers {
                                                       expand: bool,
                                                       add_mode: AddMode,
                                                       attribute_type: &str,
-                                                      attribute_value: i32);
-    fn add_text_renderer_column(&self, title: &str, fill: bool, resizable: bool, expand: bool, add_mode: AddMode);
-    fn add_progress_renderer_column(&self, title: &str, fill: bool, resizable: bool, expand: bool, add_mode: AddMode);
+                                                      column_number: i32);
+    fn add_text_renderer_column(&self,
+                                title: &str,
+                                fill: bool,
+                                resizable: bool,
+                                expand: bool,
+                                add_mode: AddMode,
+                                column_number: i32);
+    fn add_progress_renderer_column(&self,
+                                    title: &str,
+                                    fill: bool,
+                                    resizable: bool,
+                                    expand: bool,
+                                    add_mode: AddMode,
+                                    column_number: i32);
 }
 
 impl AddCellRenderers for gtk::TreeView {
@@ -146,31 +159,57 @@ impl AddCellRenderers for gtk::TreeView {
                                                       expand: bool,
                                                       add_mode: AddMode,
                                                       attribute_type: &str,
-                                                      attribute_value: i32) {
+                                                      column_number: i32) {
         let column = gtk::TreeViewColumn::new();
         match add_mode {
             AddMode::PackEnd => {
                 column.pack_end(cell, fill);
-            },
+            }
             AddMode::PackStart => {
                 column.pack_start(cell, fill);
-            },
+            }
         }
-        column.add_attribute(cell, attribute_type, attribute_value);
+        column.add_attribute(cell, attribute_type, column_number);
         column.set_title(title);
         column.set_resizable(resizable);
         column.set_expand(expand);
         self.append_column(&column);
     }
 
-    fn add_text_renderer_column(&self, title: &str, fill: bool, resizable: bool, expand: bool, add_mode: AddMode) {
+    fn add_text_renderer_column(&self,
+                                title: &str,
+                                fill: bool,
+                                resizable: bool,
+                                expand: bool,
+                                add_mode: AddMode,
+                                column_number: i32) {
         let cell = gtk::CellRendererText::new();
-        self.add_cell_renderer_column(title, &cell, fill, resizable, expand, add_mode, "text", 0);
+        self.add_cell_renderer_column(title,
+                                      &cell,
+                                      fill,
+                                      resizable,
+                                      expand,
+                                      add_mode,
+                                      "text",
+                                      column_number);
     }
 
-    fn add_progress_renderer_column(&self, title: &str, fill: bool, resizable: bool, expand: bool, add_mode: AddMode) {
+    fn add_progress_renderer_column(&self,
+                                    title: &str,
+                                    fill: bool,
+                                    resizable: bool,
+                                    expand: bool,
+                                    add_mode: AddMode,
+                                    column_number: i32) {
         let cell = gtk::CellRendererProgress::new();
-        self.add_cell_renderer_column(title, &cell, fill, resizable, expand, add_mode, "value", 1);
+        self.add_cell_renderer_column(title,
+                                      &cell,
+                                      fill,
+                                      resizable,
+                                      expand,
+                                      add_mode,
+                                      "value",
+                                      column_number);
     }
 }
 
@@ -195,9 +234,9 @@ fn initial_render(data: &Vec<Download>) -> HashMap<u64, (String, String, f32, St
 }
 
 const BYTE_UNITS: [(f32, &'static str); 4] = [(0.0, "B"),
-(1024.0, "KiB"),
-(1048576.0, "MiB"),
-(1073741800.0, "GiB")];
+                                              (1024.0, "KiB"),
+                                              (1048576.0, "MiB"),
+                                              (1073741800.0, "GiB")];
 
 trait ToByteUnits {
     fn convert_to_byte_units(&self, decimal_places: usize) -> String;
