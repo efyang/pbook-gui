@@ -80,23 +80,6 @@ pub fn gui(data: Vec<Category>,
         infostore.add_download(item.1);
     }
 
-    // placeholder values
-    // for _ in 1..10 {
-    // let progress = unsafe {
-    // let mut progress;
-    // progress = Value::new();
-    // progress.init(Type::F32);
-    // progress.set(&50.0f32);
-    // progress
-    // };
-    // let iter = infostore.append();
-    // infostore.set_string(&iter, 0, "Bob");
-    // infostore.set_string(&iter, 1, "30 KiB");
-    // infostore.set_value(&iter, 2, &progress);
-    // infostore.set_string(&iter, 3, "10 KiB/s");
-    // infostore.set_string(&iter, 4, "30s");
-    // }
-
     treeview.set_model(Some(&infostore));
     treeview.set_headers_visible(true);
 
