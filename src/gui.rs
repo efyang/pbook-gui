@@ -10,8 +10,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashMap;
-use std::iter;
 use glib::{Value, Type};
+use helper::*;
 
 #[cfg(windows)]
 const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
@@ -62,13 +62,9 @@ pub fn gui(data: Vec<Category>,
     for download in downloads.iter_mut() {
         download.start_download();
     }
-    let mut infoitems = initial_render(&downloads);
+    let mut infoitems = initial_liststore_model(&downloads);
     // main rendering
     let button = gtk::Button::new_with_label("Click me!");
-
-    // for item in infoitems {
-    // println!("{:?}", item);
-    // }
 
     let treeview = gtk::TreeView::new();
     // name, size, progress, speed, eta
@@ -80,22 +76,26 @@ pub fn gui(data: Vec<Category>,
     treeview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart, 3);
     treeview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, 4);
 
-    // placeholder values
-    for _ in 1..10 {
-        let progress = unsafe {
-            let mut progress;
-            progress = Value::new();
-            progress.init(Type::F32);
-            progress.set(&50.0f32);
-            progress
-        };
-        let iter = infostore.append();
-        infostore.set_string(&iter, 0, "Bob");
-        infostore.set_string(&iter, 1, "30 KiB");
-        infostore.set_value(&iter, 2, &progress);
-        infostore.set_string(&iter, 3, "10 KiB/s");
-        infostore.set_string(&iter, 4, "30s");
+    for item in infoitems {
+        infostore.add_download(item.1);
     }
+
+    // placeholder values
+    // for _ in 1..10 {
+    // let progress = unsafe {
+    // let mut progress;
+    // progress = Value::new();
+    // progress.init(Type::F32);
+    // progress.set(&50.0f32);
+    // progress
+    // };
+    // let iter = infostore.append();
+    // infostore.set_string(&iter, 0, "Bob");
+    // infostore.set_string(&iter, 1, "30 KiB");
+    // infostore.set_value(&iter, 2, &progress);
+    // infostore.set_string(&iter, 3, "10 KiB/s");
+    // infostore.set_string(&iter, 4, "30s");
+    // }
 
     treeview.set_model(Some(&infostore));
     treeview.set_headers_visible(true);
@@ -116,6 +116,28 @@ pub fn gui(data: Vec<Category>,
     window.show_all();
     gtk::main();
 
+}
+
+trait AddDownload {
+    fn add_download(&self, download: (String, String, f32, String, String));
+}
+
+impl AddDownload for gtk::ListStore {
+    fn add_download(&self, download: (String, String, f32, String, String)) {
+        let progress = unsafe {
+            let mut progress;
+            progress = Value::new();
+            progress.init(Type::F32);
+            progress.set(&download.2);
+            progress
+        };
+        let iter = self.append();
+        self.set_string(&iter, 0, &download.0);
+        self.set_string(&iter, 1, &download.1);
+        self.set_value(&iter, 2, &progress);
+        self.set_string(&iter, 3, &download.3);
+        self.set_string(&iter, 4, &download.4);
+    }
 }
 
 enum AddMode {
@@ -214,16 +236,17 @@ impl AddCellRenderers for gtk::TreeView {
 }
 
 // name, size, progress, speed, eta
-fn initial_render(data: &Vec<Download>) -> HashMap<u64, (String, String, f32, String, String)> {
+fn initial_liststore_model(data: &Vec<Download>)
+                           -> HashMap<u64, (String, String, f32, String, String)> {
     let mut items = HashMap::new();
     for dl in data.iter() {
         match dl.get_dlinfo() {
             &Some(ref dlinfo) => {
                 let dlid = dl.id();
-                let name = dl.get_name().to_string();
+                let name = dl.get_name().to_string().shorten(70);
                 let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
                 let percent = dlinfo.get_percentage();
-                let speed = format!("{} /s", dlinfo.get_speed().convert_to_byte_units(0));
+                let speed = format!("{}/s", dlinfo.get_speed().convert_to_byte_units(0));
                 let eta = dlinfo.get_eta().to_string();
                 items.insert(dlid, (name, size, percent, speed, eta));
             }
@@ -233,49 +256,7 @@ fn initial_render(data: &Vec<Download>) -> HashMap<u64, (String, String, f32, St
     items
 }
 
-const BYTE_UNITS: [(f32, &'static str); 4] = [(0.0, "B"),
-                                              (1024.0, "KiB"),
-                                              (1048576.0, "MiB"),
-                                              (1073741800.0, "GiB")];
-
-trait ToByteUnits {
-    fn convert_to_byte_units(&self, decimal_places: usize) -> String;
-}
-
-impl ToByteUnits for f32 {
-    fn convert_to_byte_units(&self, decimal_places: usize) -> String {
-        let mut bunit = (0.0f32, "B");
-        for bidx in 0..BYTE_UNITS.len() - 1 {
-            let min = BYTE_UNITS[bidx];
-            let max = BYTE_UNITS[bidx + 1];
-            if (self >= &min.0) && (self < &max.0) {
-                bunit = min;
-            }
-        }
-        let last = BYTE_UNITS.last().unwrap().clone();
-        if self >= &last.0 {
-            bunit = last;
-        }
-        let divided = self / bunit.0 as f32;
-        format!("{}{}", round_to_places(divided, decimal_places), bunit.1)
-    }
-}
-
-trait Repetition {
-    fn repeat(&self, times: usize) -> String;
-}
-
-impl Repetition for str {
-    fn repeat(&self, times: usize) -> String {
-        iter::repeat(self).take(times).map(|s| s.clone()).collect::<String>()
-    }
-}
-
 // places refers to places after decimal point
-fn round_to_places(n: f32, places: usize) -> f32 {
-    let div = (format!("1{}", &"0".repeat(places))).parse::<f32>().unwrap();
-    (n * div).round() / div
-}
 
 // useless until the following are regenned:
 // https://github.com/gtk-rs/gtk/blob/master/src/auto/style_context.rs#L36

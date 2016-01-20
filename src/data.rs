@@ -4,6 +4,7 @@ use std::time::Duration;
 use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
 use time::precise_time_s;
+use helper::maximum;
 
 // seconds
 const DOWNLOAD_SPEED_UPDATE_TIME: f64 = 0.1;
@@ -220,7 +221,7 @@ impl DownloadInfo {
     }
 
     pub fn get_percentage(&self) -> f32 {
-        self.progress as f32/self.total as f32
+        self.progress as f32/maximum(self.total as f32, 1.0)
     }
     
     // to bytes per second
