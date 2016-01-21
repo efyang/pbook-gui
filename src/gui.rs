@@ -82,29 +82,67 @@ pub fn gui(data: Vec<Category>,
 
     downloadview.set_model(Some(&download_store));
     downloadview.set_headers_visible(true);
+    
+    // add the scroll
+    let download_scroll = gtk::ScrolledWindow::new(None, None);
+    download_scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
+    download_scroll.add(&downloadview);
+    
+    // put the scroll and downloads together
+    let download_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    download_box.pack_start(&download_scroll, true, true, 0);
+    download_box.pack_end(&button, false, true, 0);
 
     // cellrenderertoggle for checkbox in treeview
     let categoryview = gtk::TreeView::new();
     let category_column_types = [Type::String];
     let category_store = gtk::TreeStore::new(&category_column_types);
+    category_store.add_categories(&data);
+    categoryview.add_text_renderer_column("Categories", true, true, true, AddMode::PackStart, 0);
+    categoryview.set_model(Some(&category_store));
 
+    let category_scroll = gtk::ScrolledWindow::new(None, None);
+    category_scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
+    category_scroll.add(&categoryview);
 
-    let scroll = gtk::ScrolledWindow::new(None, None);
-    scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
-    scroll.add(&downloadview);
-
-    let vbox = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    vbox.pack_start(&scroll, true, true, 0);
-    vbox.pack_end(&button, false, true, 0);
-
+    let category_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
+    category_box.pack_start(&category_scroll, true, true, 0);
+    
     // holds both the category list and the info list
-    let lists_holder = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-    lists_holder.pack_end(&vbox, true, true, 0);
+    let lists_holder = gtk::Box::new(gtk::Orientation::Horizontal, 30);
+    lists_holder.pack_start(&category_box, true, true, 0);
+    lists_holder.pack_end(&download_box, true, true, 0);
     window.add(&lists_holder);
 
     window.show_all();
     gtk::main();
 
+}
+
+trait AddCategories {
+    fn add_category(&self, category: &Category);
+    fn add_categories(&self, categories: &[Category]);
+}
+
+impl AddCategories for gtk::TreeStore {
+    fn add_category(&self, category: &Category) {
+        let category_name = category.get_name();
+        let downloads = category.downloads();
+        let iter = self.append(None);
+        self.set_string(&iter, 0, category_name);
+        // add all of the downloads
+        for download in downloads.iter() {
+            let download_name = download.get_name();
+            let child_iter = self.append(Some(&iter));
+            self.set_string(&child_iter, 0, download_name);
+        }
+    }
+
+    fn add_categories(&self, categories: &[Category]) {
+        for category in categories.iter() {
+            self.add_category(category);
+        }
+    }
 }
 
 trait AddDownload {
@@ -135,7 +173,6 @@ enum AddMode {
 }
 
 trait AddCellRenderers {
-    // addmode 0 ->
     fn add_cell_renderer_column<T: IsA<CellRenderer>>(&self,
                                                       title: &str,
                                                       cell: &T,
