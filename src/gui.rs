@@ -287,6 +287,14 @@ fn initial_categorystore_model(data: &Vec<Category>) -> () {
     unimplemented!();
 }
 
+trait RawCssLoad {
+    fn load_from_data(data: &str) {
+
+    }
+}
+
+// TODO: Manually implement with a trait until its implemented in the main branch
+
 // useless until the following are regenned:
 // https://github.com/gtk-rs/gtk/blob/master/src/auto/style_context.rs#L36
 // https://github.com/gtk-rs/gtk/blob/master/src/auto/css_provider.rs#L26
