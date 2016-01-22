@@ -7,6 +7,8 @@ extern crate glib;
 extern crate num_cpus;
 extern crate threadpool;
 extern crate time;
+extern crate gtk_sys;
+extern crate libc;
 
 use std::env;
 use std::thread;
@@ -20,6 +22,7 @@ mod parse;
 mod commhandler;
 mod download;
 mod helper;
+mod gtkdef;
 
 use commhandler::*;
 use parse::*;

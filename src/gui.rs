@@ -12,6 +12,7 @@ use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashMap;
 use glib::{Value, Type};
 use helper::*;
+use gtkdef::*;
 
 #[cfg(windows)]
 const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
@@ -285,12 +286,6 @@ fn initial_liststore_model(data: &Vec<Download>)
 
 fn initial_categorystore_model(data: &Vec<Category>) -> () {
     unimplemented!();
-}
-
-trait RawCssLoad {
-    fn load_from_data(data: &str) {
-
-    }
 }
 
 // TODO: Manually implement with a trait until its implemented in the main branch
