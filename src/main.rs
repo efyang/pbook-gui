@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_imports, unused_attributes, unused_variables)]
-//#![feature(convert)]
+#![feature(convert)]
 extern crate hyper;
 extern crate gtk;
 extern crate gdk;
@@ -30,7 +30,7 @@ use include::RAW_DATA;
 
 fn main() {
     let threads = num_cpus::get();
-    let parsed_data: Vec<Category> = parse(RAW_DATA);
+    let mut parsed_data: Vec<Category> = parse(RAW_DATA);
     let downloadthreads_data = parsed_data.clone();
 
     // initialize the channels between gui and comm handler
@@ -51,5 +51,5 @@ fn main() {
     });
 
     // start gtk gui
-    gui::gui(parsed_data, gui_update_recv, gui_cmd_send);
+    gui::gui(&mut parsed_data, gui_update_recv, gui_cmd_send);
 }

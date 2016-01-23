@@ -1,4 +1,5 @@
 pub use data::*;
+use std::ascii::AsciiExt;
 
 // pub fn parse(data: &str) -> Vec<Vec<Download>> {
 pub fn parse(data: &str) -> Vec<Category> {
@@ -38,10 +39,12 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
 
     // remove all unnecessary categories
     categories = categories.iter()
-                           .filter(|c| !c.get_name().contains("Index"))
+                           .filter(|c| {
+                               !c.get_name().to_ascii_lowercase().contains("index") ||
+                               c.downloads().len() != 0
+                           })
                            .map(|c| c.clone())
                            .collect();
-
     categories
 }
 

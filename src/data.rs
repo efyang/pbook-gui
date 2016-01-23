@@ -56,7 +56,7 @@ impl Category {
 
     pub fn set_enable_state_all(&mut self, enable_state: bool) {
         for dl in self.downloads.iter_mut() {
-            dl.enabled = enable_state;
+            dl.set_enable_state(enable_state);
         }
     }
 
@@ -76,7 +76,10 @@ impl Category {
         }
     }
 
-    pub fn increment_download_progress(&mut self, download_id: &u64, increment: usize) -> Result<(), String> {
+    pub fn increment_download_progress(&mut self,
+                                       download_id: &u64,
+                                       increment: usize)
+                                       -> Result<(), String> {
         for dl in self.downloads.iter_mut() {
             if &dl.id == download_id {
                 return dl.increment_progress(increment);
@@ -88,6 +91,16 @@ impl Category {
 
     pub fn downloads(&self) -> &[Download] {
         &self.downloads
+    }
+
+    pub fn is_enabled(&self) -> bool {
+        self.downloads.iter().all(|x| x.is_downloading())
+    }
+
+    pub fn begin_downloading_all(&mut self) {
+        for download in self.downloads.iter_mut() {
+            download.start_download();
+        }
     }
 }
 
@@ -132,8 +145,16 @@ impl Download {
         self.dlinfo.is_some()
     }
 
+    pub fn is_enabled(&self) -> bool {
+        self.enabled
+    }
+
     pub fn enable(&mut self) {
         self.enabled = true;
+    }
+
+    pub fn set_enable_state(&mut self, newstate: bool) {
+        self.enabled = newstate;
     }
 
     pub fn start_download(&mut self) {
@@ -221,18 +242,18 @@ impl DownloadInfo {
     }
 
     pub fn get_percentage(&self) -> f32 {
-        self.progress as f32/maximum(self.total as f32, 1.0)
+        self.progress as f32 / maximum(self.total as f32, 1.0)
     }
-    
+
     // to bytes per second
     pub fn get_speed(&self) -> f32 {
-        self.recent_progress as f32/DOWNLOAD_SPEED_UPDATE_TIME as f32
+        self.recent_progress as f32 / DOWNLOAD_SPEED_UPDATE_TIME as f32
     }
 
     // to seconds
     pub fn get_eta(&self) -> usize {
         let bytes_left = self.total - self.progress;
         let speed = self.get_speed();
-        (bytes_left as f32/speed) as usize
+        (bytes_left as f32 / speed) as usize
     }
 }

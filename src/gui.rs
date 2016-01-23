@@ -23,7 +23,7 @@ const DEFAULT_GTK_CSS_CONFIG: &'static str = "../gtk.css";
 const SECONDARY_GTK_CSS_CONFIG: &'static str = "gtk.css";
 const GTK_THEME_CFG: &'static str = "theme.txt";
 
-pub fn gui(data: Vec<Category>,
+pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<Vec<Download>>,
            command_send_channel: Sender<(String, Option<u64>)>) {
     if gtk::init().is_err() {
@@ -44,25 +44,29 @@ pub fn gui(data: Vec<Category>,
     let default_config_path = current_working_dir.join(DEFAULT_GTK_CSS_CONFIG);
     let secondary_config_path = current_working_dir.join(SECONDARY_GTK_CSS_CONFIG);
 
-    // setup_theme(current_working_dir,
-    // default_config_path,
-    // secondary_config_path);
+    setup_theme(current_working_dir,
+                default_config_path,
+                secondary_config_path);
 
     let window = gtk::Window::new(gtk::WindowType::Toplevel);
 
     window.set_title("Programming Book Downloader v1.0");
     window.set_border_width(10);
     window.set_window_position(gtk::WindowPosition::Center);
-    window.set_default_size(900, 700);
+    window.set_default_size(1000, 500);
 
     window.connect_delete_event(|_, _| {
         gtk::main_quit();
         Inhibit(false)
     });
-    let mut downloads = data.to_downloads();
-    for download in downloads.iter_mut() {
-        download.start_download();
+
+    // placeholder values
+    for category in data.iter_mut() {
+        category.set_enable_state_all(true);
+        category.begin_downloading_all();
     }
+
+    let downloads = data.to_downloads();
     let mut infoitems = initial_liststore_model(&downloads);
     // main rendering
     let button = gtk::Button::new_with_label("Click me!");
@@ -83,23 +87,23 @@ pub fn gui(data: Vec<Category>,
 
     downloadview.set_model(Some(&download_store));
     downloadview.set_headers_visible(true);
-    
+
     // add the scroll
     let download_scroll = gtk::ScrolledWindow::new(None, None);
     download_scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
     download_scroll.add(&downloadview);
-    
+
     // put the scroll and downloads together
     let download_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
     download_box.pack_start(&download_scroll, true, true, 0);
     download_box.pack_end(&button, false, true, 0);
 
-    // cellrenderertoggle for checkbox in treeview
     let categoryview = gtk::TreeView::new();
-    let category_column_types = [Type::String];
+    let category_column_types = [Type::String, Type::Bool];
     let category_store = gtk::TreeStore::new(&category_column_types);
     category_store.add_categories(&data);
     categoryview.add_text_renderer_column("Categories", true, true, true, AddMode::PackStart, 0);
+    categoryview.add_toggle_renderer_column("Download?", false, false, false, AddMode::PackEnd, 1);
     categoryview.set_model(Some(&category_store));
 
     let category_scroll = gtk::ScrolledWindow::new(None, None);
@@ -108,7 +112,7 @@ pub fn gui(data: Vec<Category>,
 
     let category_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
     category_box.pack_start(&category_scroll, true, true, 0);
-    
+
     // holds both the category list and the info list
     let lists_holder = gtk::Box::new(gtk::Orientation::Horizontal, 30);
     lists_holder.pack_start(&category_box, true, true, 0);
@@ -130,12 +134,26 @@ impl AddCategories for gtk::TreeStore {
         let category_name = category.get_name();
         let downloads = category.downloads();
         let iter = self.append(None);
+        let category_download_bool = unsafe {
+            let mut value = Value::new();
+            value.init(Type::Bool);
+            value.set(&category.is_enabled());
+            value
+        };
         self.set_string(&iter, 0, category_name);
+        self.set_value(&iter, 1, &category_download_bool);
         // add all of the downloads
         for download in downloads.iter() {
             let download_name = download.get_name();
+            let download_download_bool = unsafe {
+                let mut value = Value::new();
+                value.init(Type::Bool);
+                value.set(&download.is_enabled());
+                value
+            };
             let child_iter = self.append(Some(&iter));
             self.set_string(&child_iter, 0, download_name);
+            self.set_value(&iter, 1, &download_download_bool);
         }
     }
 
@@ -197,6 +215,14 @@ trait AddCellRenderers {
                                     expand: bool,
                                     add_mode: AddMode,
                                     column_number: i32);
+    fn add_toggle_renderer_column(&self,
+                                  title: &str,
+                                  fill: bool,
+                                  resizable: bool,
+                                  expand: bool,
+                                  add_mode: AddMode,
+                                  column_number: i32);
+
 }
 
 impl AddCellRenderers for gtk::TreeView {
@@ -260,6 +286,25 @@ impl AddCellRenderers for gtk::TreeView {
                                       "value",
                                       column_number);
     }
+
+    fn add_toggle_renderer_column(&self,
+                                  title: &str,
+                                  fill: bool,
+                                  resizable: bool,
+                                  expand: bool,
+                                  add_mode: AddMode,
+                                  column_number: i32) {
+        let cell = gtk::CellRendererToggle::new();
+        cell.set_activatable(true);
+        self.add_cell_renderer_column(title,
+                                      &cell,
+                                      fill,
+                                      resizable,
+                                      expand,
+                                      add_mode,
+                                      "active",
+                                      column_number);
+    }
 }
 
 // name, size, progress, speed, eta
@@ -288,135 +333,128 @@ fn initial_categorystore_model(data: &Vec<Category>) -> () {
     unimplemented!();
 }
 
-// TODO: Manually implement with a trait until its implemented in the main branch
+// Manually implemented with a trait until its implemented in the main branch
+fn setup_theme(current_working_dir: &Path,
+               default_config_path: PathBuf,
+               secondary_config_path: PathBuf) {
+    match get_theme_dir(&current_working_dir) {
+        Ok(theme_dir) => {
+            // check if gtk css config exists, if so use it
+            let mut gtk_theme = String::new();
+            match File::open(current_working_dir.join("..").join(GTK_THEME_CFG)) {
+                Ok(ref mut gtk_cfg_file) => {
+                    match gtk_cfg_file.read_to_string(&mut gtk_theme) {
+                        Ok(_) => {}
+                        Err(_) => {
+                            println!("Could not read theme.txt file to string, defaulting to Arc \
+                                      theme.");
+                            gtk_theme = "arc".to_string();
+                        }
+                    }
+                }
+                Err(_) => {
+                    match File::open(current_working_dir.join(GTK_THEME_CFG)) {
+                        Ok(ref mut gtk_cfg_file) => {
+                            match gtk_cfg_file.read_to_string(&mut gtk_theme) {
+                                Ok(_) => {}
+                                Err(_) => {
+                                    println!("Could not read theme.txt file to string, \
+                                              defaulting to Arc theme.");
+                                    gtk_theme = "arc".to_string();
+                                }
+                            }
+                        }
+                        Err(_) => {
+                            println!("No theme.txt file found, defaulting to Arc theme.");
+                            gtk_theme = "arc".to_string();
+                        }
+                    }
+                }
+            }
+            let gtk_theme_path = theme_dir.join(gtk_theme).join("gtk.css");
+            if default_config_path.exists() {
+                let new_css = get_gtk_css(&default_config_path, &gtk_theme_path);
+                if let Ok(style_provider) = CssProvider::load_from_data(&new_css) {
+                    if let Some(screen) = Screen::get_default() {
+                        StyleContext::add_provider_for_screen(&screen,
+                                                              &style_provider,
+                                                              STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+                        println!("default success");
+                    } else {
+                        println!("here1 default");
+                        no_css_error();
+                    }
+                } else {
+                    println!("here2 default");
+                    no_css_error();
+                }
+            } else if secondary_config_path.exists() {
+                let new_css = get_gtk_css(&secondary_config_path, &gtk_theme_path);
+                if let Ok(style_provider) = CssProvider::load_from_data(&new_css) {
+                    if let Some(screen) = Screen::get_default() {
+                        StyleContext::add_provider_for_screen(&screen,
+                                                              &style_provider,
+                                                              STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
+                        println!("secondary success");
+                    } else {
+                        println!("here1 secondary");
+                        no_css_error();
+                    }
+                } else {
+                    CssProvider::load_from_data(&new_css).expect("println");
+                    println!("here2 secondary");
+                    no_css_error();
+                }
+            } else {
+                no_css_error();
+            }
+        }
+        Err(e) => {
+            println!("{}", e);
+        }
+    }
+}
 
-// useless until the following are regenned:
-// https://github.com/gtk-rs/gtk/blob/master/src/auto/style_context.rs#L36
-// https://github.com/gtk-rs/gtk/blob/master/src/auto/css_provider.rs#L26
-//
-// fn setup_theme(current_working_dir: &Path,
-// default_config_path: PathBuf,
-// secondary_config_path: PathBuf) {
-// match get_theme_dir(&current_working_dir) {
-// Ok(theme_dir) => {
-// check if gtk css config exists, if so use it
-// let mut gtk_theme = String::new();
-// match File::open(current_working_dir.join("..").join(GTK_THEME_CFG)) {
-// Ok(ref mut gtk_cfg_file) => {
-// match gtk_cfg_file.read_to_string(&mut gtk_theme) {
-// Ok(_) => {}
-// Err(_) => {
-// println!("Could not read theme.txt file to string, defaulting to Arc \
-// theme.");
-// gtk_theme = "arc".to_string();
-// }
-// }
-// }
-// Err(_) => {
-// match File::open(current_working_dir.join(GTK_THEME_CFG)) {
-// Ok(ref mut gtk_cfg_file) => {
-// match gtk_cfg_file.read_to_string(&mut gtk_theme) {
-// Ok(_) => {}
-// Err(_) => {
-// println!("Could not read theme.txt file to string, \
-// defaulting to Arc theme.");
-// gtk_theme = "arc".to_string();
-// }
-// }
-// }
-// Err(_) => {
-// println!("No theme.txt file found, defaulting to Arc theme.");
-// gtk_theme = "arc".to_string();
-// }
-// }
-// }
-// }
-// let gtk_theme_path = theme_dir.join(gtk_theme).join("gtk.css");
-// if default_config_path.exists() {
-// let new_css = get_gtk_css(&default_config_path, &gtk_theme_path);
-// if let Ok(style_provider) = CssProvider::load_from_data(&new_css) {
-// if let Some(screen) = Screen::get_default() {
-// StyleContext::add_provider_for_screen(&screen,
-// &style_provider,
-// STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
-// println!("default success");
-// } else {
-// println!("here1 default");
-// no_css_error();
-// }
-// } else {
-// println!("here2 default");
-// no_css_error();
-// }
-// } else if secondary_config_path.exists() {
-// let new_css = get_gtk_css(&secondary_config_path, &gtk_theme_path);
-// if let Ok(style_provider) = CssProvider::load_from_data(&new_css) {
-// if let Some(screen) = Screen::get_default() {
-// StyleContext::add_provider_for_screen(&screen,
-// &style_provider,
-// STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
-// println!("secondary success");
-// } else {
-// println!("here1 secondary");
-// no_css_error();
-// }
-// } else {
-// CssProvider::load_from_data(&new_css).expect("println");
-// println!("here2 secondary");
-// no_css_error();
-// }
-// } else {
-// no_css_error();
-// }
-// }
-// Err(e) => {
-// println!("{}", e);
-// }
-// }
-// }
-//
-// fn get_gtk_css(config_path: &Path, gtk_theme_path: &Path) -> String {
-// let mut gtk_config = String::new();
-// match File::open(config_path) {
-// Ok(ref mut f) => {
-// match f.read_to_string(&mut gtk_config) {
-// Ok(_) => {}
-// Err(_) => {
-// println!("Could not read gtk config to string, going with defaults");
-// gtk_config = "".to_string();
-// }
-// }
-// }
-// Err(_) => {
-// println!("Could not open gtk config");
-// gtk_config = "".to_string();
-// }
-// }
-// [gtk_config, make_import_css(gtk_theme_path)].join("\n")
-// }
-//
-// fn make_import_css(path: &Path) -> String {
-// ["@import url(\"", double_slashes(path.to_str().unwrap()).as_str(), "\");\n"].join("")
-// }
-//
-// fn double_slashes(p: &str) -> String {
-// p.replace("\\", "\\\\")
-// }
-//
-// fn get_theme_dir(cwd: &Path) -> Result<PathBuf, String> {
-// let first_choice = cwd.join("..").join("themes");
-// let second_choice = cwd.join("themes");
-// if first_choice.exists() {
-// Ok(first_choice)
-// } else if second_choice.exists() {
-// Ok(second_choice)
-// } else {
-// Err("Failed to get theme dir".to_string())
-// }
-// }
-//
-// fn no_css_error() {
-// println!("No valid GTK CSS config or gdk screen found, using gtk defaults.");
-// }
-//
-//
+fn get_gtk_css(config_path: &Path, gtk_theme_path: &Path) -> String {
+    let mut gtk_config = String::new();
+    match File::open(config_path) {
+        Ok(ref mut f) => {
+            match f.read_to_string(&mut gtk_config) {
+                Ok(_) => {}
+                Err(_) => {
+                    println!("Could not read gtk config to string, going with defaults");
+                    gtk_config = "".to_string();
+                }
+            }
+        }
+        Err(_) => {
+            println!("Could not open gtk config");
+            gtk_config = "".to_string();
+        }
+    }
+    [gtk_config, make_import_css(gtk_theme_path)].join("\n")
+}
+
+fn make_import_css(path: &Path) -> String {
+    ["@import url(\"", double_slashes(path.to_str().unwrap()).as_str(), "\");\n"].join("")
+}
+
+fn double_slashes(p: &str) -> String {
+    p.replace("\\", "\\\\")
+}
+
+fn get_theme_dir(cwd: &Path) -> Result<PathBuf, String> {
+    let first_choice = cwd.join("..").join("themes");
+    let second_choice = cwd.join("themes");
+    if first_choice.exists() {
+        Ok(first_choice)
+    } else if second_choice.exists() {
+        Ok(second_choice)
+    } else {
+        Err("Failed to get theme dir".to_string())
+    }
+}
+
+fn no_css_error() {
+    println!("No valid GTK CSS config or gdk screen found, using gtk defaults.");
+}
