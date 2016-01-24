@@ -10,7 +10,7 @@ build = "build/build.rs"
 [dependencies]
 threadpool = "0.2.1"
 hyper = "0.7.1"
-gtk = {git = "https://github.com/gtk-rs/gtk"}
+gtk = {git = "https://github.com/honorabrutroll/gtk"}
 gtk-sys = {git = "https://github.com/gtk-rs/sys"}
 glib = {git = "https://github.com/gtk-rs/glib"}
 gdk = {git = "https://github.com/gtk-rs/gdk"}

@@ -3,14 +3,14 @@ use gtk;
 use gdk;
 use gtk::prelude::*;
 use gtk::{Orientation, CssProvider, StyleContext, STYLE_PROVIDER_PRIORITY_APPLICATION, IsA,
-          CellRenderer};
+          CellRenderer, Value};
 use gdk::screen::Screen;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashMap;
-use glib::{Value, Type};
+use glib::types::Type;
 use helper::*;
 use gtkdef::*;
 
@@ -52,7 +52,7 @@ pub fn gui(data: &mut Vec<Category>,
 
     window.set_title("Programming Book Downloader v1.0");
     window.set_border_width(10);
-    window.set_window_position(gtk::WindowPosition::Center);
+    window.set_position(gtk::WindowPosition::Center);
     window.set_default_size(1000, 500);
 
     window.connect_delete_event(|_, _| {
@@ -134,25 +134,15 @@ impl AddCategories for gtk::TreeStore {
         let category_name = category.get_name();
         let downloads = category.downloads();
         let iter = self.append(None);
-        let category_download_bool = unsafe {
-            let mut value = Value::new();
-            value.init(Type::Bool);
-            value.set(&category.is_enabled());
-            value
-        };
-        self.set_string(&iter, 0, category_name);
+        let category_download_bool = Value::from(category.is_enabled());
+        self.set_value(&iter, 0, &Value::from(category_name));
         self.set_value(&iter, 1, &category_download_bool);
         // add all of the downloads
         for download in downloads.iter() {
             let download_name = download.get_name();
-            let download_download_bool = unsafe {
-                let mut value = Value::new();
-                value.init(Type::Bool);
-                value.set(&download.is_enabled());
-                value
-            };
+            let download_download_bool = Value::from(download.is_enabled());
             let child_iter = self.append(Some(&iter));
-            self.set_string(&child_iter, 0, download_name);
+            self.set_value(&child_iter, 0, &Value::from(download_name));
             self.set_value(&iter, 1, &download_download_bool);
         }
     }
@@ -170,19 +160,12 @@ trait AddDownload {
 
 impl AddDownload for gtk::ListStore {
     fn add_download(&self, download: (String, String, f32, String, String)) {
-        let progress = unsafe {
-            let mut progress;
-            progress = Value::new();
-            progress.init(Type::F32);
-            progress.set(&download.2);
-            progress
-        };
         let iter = self.append();
-        self.set_string(&iter, 0, &download.0);
-        self.set_string(&iter, 1, &download.1);
-        self.set_value(&iter, 2, &progress);
-        self.set_string(&iter, 3, &download.3);
-        self.set_string(&iter, 4, &download.4);
+        self.set_value(&iter, 0, &Value::from(download.0));
+        self.set_value(&iter, 1, &Value::from(download.1));
+        self.set_value(&iter, 2, &Value::from(download.2));
+        self.set_value(&iter, 3, &Value::from(download.3));
+        self.set_value(&iter, 4, &Value::from(download.4));
     }
 }
 
