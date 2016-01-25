@@ -279,6 +279,7 @@ impl AddCellRenderers for gtk::TreeView {
                                   column_number: i32) {
         let cell = gtk::CellRendererToggle::new();
         cell.set_activatable(true);
+        cell.connect_toggled(|_, path| println!("{}", path));
         self.add_cell_renderer_column(title,
                                       &cell,
                                       fill,
