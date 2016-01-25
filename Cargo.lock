@@ -103,7 +103,7 @@ dependencies = [
 [[package]]
 name = "gdk"
 version = "0.3.0"
-source = "git+https://github.com/gtk-rs/gdk#8585bca7717436067f5960e7c4658895dd7789b4"
+source = "git+https://github.com/gtk-rs/gdk#2c4169c8872b8f9e4df8fb90fbd30686eb389b7a"
 dependencies = [
  "cairo-rs 0.0.8 (git+https://github.com/gtk-rs/cairo)",
  "gdk-pixbuf-sys 0.2.0 (git+https://github.com/gtk-rs/sys)",
@@ -156,7 +156,7 @@ dependencies = [
 [[package]]
 name = "glib"
 version = "0.0.8"
-source = "git+https://github.com/gtk-rs/glib#5ddc0af216b20ec4d5db8c22dc8d66ac8b6f1b88"
+source = "git+https://github.com/gtk-rs/glib#1b3f734b608bab888b10377bbfa2b19310f9c8dc"
 dependencies = [
  "gio-sys 0.2.0 (git+https://github.com/gtk-rs/sys)",
  "glib-sys 0.2.0 (git+https://github.com/gtk-rs/sys)",
@@ -188,7 +188,7 @@ dependencies = [
 [[package]]
 name = "gtk"
 version = "0.0.7"
-source = "git+https://github.com/honorabrutroll/gtk#c6b68594753387744339171c3f0c80e71c32c385"
+source = "git+https://github.com/honorabrutroll/gtk#16a36528b24dce2edef20b731374ca7c4ef54031"
 dependencies = [
  "cairo-rs 0.0.8 (git+https://github.com/gtk-rs/cairo)",
  "cairo-sys-rs 0.1.3 (git+https://github.com/gtk-rs/cairo)",
@@ -418,7 +418,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "rustc_version"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "semver 0.1.20 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -489,7 +489,7 @@ name = "unicase"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "rustc_version 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc_version 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
