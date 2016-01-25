@@ -23,6 +23,8 @@ mod commhandler;
 mod download;
 mod helper;
 mod gtkdef;
+mod cellrenderers;
+mod theme;
 
 use commhandler::*;
 use parse::*;

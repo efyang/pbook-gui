@@ -102,6 +102,10 @@ impl Category {
             download.start_download();
         }
     }
+
+    pub fn get_ids(&self) -> Vec<u64> {
+        self.downloads.iter().map(|dl| dl.get_id()).collect::<Vec<u64>>()
+    }
 }
 
 pub fn get_dl_id(name: &str, url: &str) -> u64 {
@@ -177,7 +181,7 @@ impl Download {
         self.clone().dlinfo.unwrap().get_path()
     }
 
-    pub fn id(&self) -> u64 {
+    pub fn get_id(&self) -> u64 {
         self.id
     }
 }

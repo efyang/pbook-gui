@@ -32,7 +32,7 @@ impl Downloader {
                -> Downloader {
         Downloader {
             url: download.get_url().to_string(),
-            id: download.id(),
+            id: download.get_id(),
             download_path: download.get_path().to_owned(),
             cmd_recv: cmd_recv,
             progress_send: progress_send,

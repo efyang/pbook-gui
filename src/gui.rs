@@ -1,27 +1,14 @@
 use data::*;
 use gtk;
-use gdk;
 use gtk::prelude::*;
-use gtk::{Orientation, CssProvider, StyleContext, STYLE_PROVIDER_PRIORITY_APPLICATION, IsA,
-          CellRenderer, Value};
-use gdk::screen::Screen;
+use gtk::{Orientation, Value};
 use std::env;
-use std::fs::File;
-use std::io::prelude::*;
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashMap;
 use glib::types::Type;
 use helper::*;
-use gtkdef::*;
-
-#[cfg(windows)]
-const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
-
-#[cfg(not(windows))]
-const DEFAULT_GTK_CSS_CONFIG: &'static str = "../gtk.css";
-
-const SECONDARY_GTK_CSS_CONFIG: &'static str = "gtk.css";
-const GTK_THEME_CFG: &'static str = "theme.txt";
+use cellrenderers::*;
+use theme::*;
 
 pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<Vec<Download>>,
@@ -35,7 +22,7 @@ pub fn gui(data: &mut Vec<Category>,
     match env::current_exe() {
         Ok(exe_path) => current_exe_path = exe_path.clone(),
         Err(e) => {
-            println!("failed to get current exe path: {}", e);
+            println!("Failed to get current exe path: {}", e);
             current_exe_path = Path::new("./pbook-gui").to_path_buf()
         }
     };
@@ -103,7 +90,17 @@ pub fn gui(data: &mut Vec<Category>,
     let category_store = gtk::TreeStore::new(&category_column_types);
     category_store.add_categories(&data);
     categoryview.add_text_renderer_column("Categories", true, true, true, AddMode::PackStart, 0);
-    categoryview.add_toggle_renderer_column("Download?", false, false, false, AddMode::PackEnd, 1);
+    let toggle_cell = categoryview.add_toggle_renderer_column("Download?",
+                                                              false,
+                                                              false,
+                                                              false,
+                                                              AddMode::PackEnd,
+                                                              1);
+    toggle_cell.connect_toggled(|_, path| println!("{}", path));
+    // treepath references the main list of categories ->
+    // if depth == 1 then get list of downloads from the category and send messages with all the
+    // hashes
+    // if depth == 2 then just send the hash of the individual download
     categoryview.set_model(Some(&category_store));
 
     let category_scroll = gtk::ScrolledWindow::new(None, None);
@@ -121,7 +118,6 @@ pub fn gui(data: &mut Vec<Category>,
 
     window.show_all();
     gtk::main();
-
 }
 
 trait AddCategories {
@@ -169,128 +165,6 @@ impl AddDownload for gtk::ListStore {
     }
 }
 
-enum AddMode {
-    PackEnd,
-    PackStart,
-}
-
-trait AddCellRenderers {
-    fn add_cell_renderer_column<T: IsA<CellRenderer>>(&self,
-                                                      title: &str,
-                                                      cell: &T,
-                                                      fill: bool,
-                                                      resizable: bool,
-                                                      expand: bool,
-                                                      add_mode: AddMode,
-                                                      attribute_type: &str,
-                                                      column_number: i32);
-    fn add_text_renderer_column(&self,
-                                title: &str,
-                                fill: bool,
-                                resizable: bool,
-                                expand: bool,
-                                add_mode: AddMode,
-                                column_number: i32);
-    fn add_progress_renderer_column(&self,
-                                    title: &str,
-                                    fill: bool,
-                                    resizable: bool,
-                                    expand: bool,
-                                    add_mode: AddMode,
-                                    column_number: i32);
-    fn add_toggle_renderer_column(&self,
-                                  title: &str,
-                                  fill: bool,
-                                  resizable: bool,
-                                  expand: bool,
-                                  add_mode: AddMode,
-                                  column_number: i32);
-
-}
-
-impl AddCellRenderers for gtk::TreeView {
-    fn add_cell_renderer_column<T: IsA<CellRenderer>>(&self,
-                                                      title: &str,
-                                                      cell: &T,
-                                                      fill: bool,
-                                                      resizable: bool,
-                                                      expand: bool,
-                                                      add_mode: AddMode,
-                                                      attribute_type: &str,
-                                                      column_number: i32) {
-        let column = gtk::TreeViewColumn::new();
-        match add_mode {
-            AddMode::PackEnd => {
-                column.pack_end(cell, fill);
-            }
-            AddMode::PackStart => {
-                column.pack_start(cell, fill);
-            }
-        }
-        column.add_attribute(cell, attribute_type, column_number);
-        column.set_title(title);
-        column.set_resizable(resizable);
-        column.set_expand(expand);
-        self.append_column(&column);
-    }
-
-    fn add_text_renderer_column(&self,
-                                title: &str,
-                                fill: bool,
-                                resizable: bool,
-                                expand: bool,
-                                add_mode: AddMode,
-                                column_number: i32) {
-        let cell = gtk::CellRendererText::new();
-        self.add_cell_renderer_column(title,
-                                      &cell,
-                                      fill,
-                                      resizable,
-                                      expand,
-                                      add_mode,
-                                      "text",
-                                      column_number);
-    }
-
-    fn add_progress_renderer_column(&self,
-                                    title: &str,
-                                    fill: bool,
-                                    resizable: bool,
-                                    expand: bool,
-                                    add_mode: AddMode,
-                                    column_number: i32) {
-        let cell = gtk::CellRendererProgress::new();
-        self.add_cell_renderer_column(title,
-                                      &cell,
-                                      fill,
-                                      resizable,
-                                      expand,
-                                      add_mode,
-                                      "value",
-                                      column_number);
-    }
-
-    fn add_toggle_renderer_column(&self,
-                                  title: &str,
-                                  fill: bool,
-                                  resizable: bool,
-                                  expand: bool,
-                                  add_mode: AddMode,
-                                  column_number: i32) {
-        let cell = gtk::CellRendererToggle::new();
-        cell.set_activatable(true);
-        cell.connect_toggled(|_, path| println!("{}", path));
-        self.add_cell_renderer_column(title,
-                                      &cell,
-                                      fill,
-                                      resizable,
-                                      expand,
-                                      add_mode,
-                                      "active",
-                                      column_number);
-    }
-}
-
 // name, size, progress, speed, eta
 fn initial_liststore_model(data: &Vec<Download>)
                            -> HashMap<u64, (String, String, f32, String, String)> {
@@ -298,7 +172,7 @@ fn initial_liststore_model(data: &Vec<Download>)
     for dl in data.iter() {
         match dl.get_dlinfo() {
             &Some(ref dlinfo) => {
-                let dlid = dl.id();
+                let dlid = dl.get_id();
                 // shorten needed until ellipsize is implemented for CellRendererText
                 let name = dl.get_name().to_string().shorten(50);
                 let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
@@ -311,128 +185,4 @@ fn initial_liststore_model(data: &Vec<Download>)
         }
     }
     items
-}
-
-fn initial_categorystore_model(data: &Vec<Category>) -> () {
-    unimplemented!();
-}
-
-// Manually implemented with a trait until its implemented in the main branch
-fn setup_theme(current_working_dir: &Path,
-               default_config_path: PathBuf,
-               secondary_config_path: PathBuf) {
-    match get_theme_dir(&current_working_dir) {
-        Ok(theme_dir) => {
-            // check if gtk css config exists, if so use it
-            let mut gtk_theme = String::new();
-            match File::open(current_working_dir.join("..").join(GTK_THEME_CFG)) {
-                Ok(ref mut gtk_cfg_file) => {
-                    match gtk_cfg_file.read_to_string(&mut gtk_theme) {
-                        Ok(_) => {}
-                        Err(_) => {
-                            println!("Could not read theme.txt file to string, defaulting to Arc \
-                                      theme.");
-                            gtk_theme = "arc".to_string();
-                        }
-                    }
-                }
-                Err(_) => {
-                    match File::open(current_working_dir.join(GTK_THEME_CFG)) {
-                        Ok(ref mut gtk_cfg_file) => {
-                            match gtk_cfg_file.read_to_string(&mut gtk_theme) {
-                                Ok(_) => {}
-                                Err(_) => {
-                                    println!("Could not read theme.txt file to string, \
-                                              defaulting to Arc theme.");
-                                    gtk_theme = "arc".to_string();
-                                }
-                            }
-                        }
-                        Err(_) => {
-                            println!("No theme.txt file found, defaulting to Arc theme.");
-                            gtk_theme = "arc".to_string();
-                        }
-                    }
-                }
-            }
-            let gtk_theme_path = theme_dir.join(gtk_theme).join("gtk.css");
-            if default_config_path.exists() {
-                let new_css = get_gtk_css(&default_config_path, &gtk_theme_path);
-                if let Ok(style_provider) = CssProvider::load_from_data(&new_css) {
-                    if let Some(screen) = Screen::get_default() {
-                        StyleContext::add_provider_for_screen(&screen,
-                                                              &style_provider,
-                                                              STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
-                    } else {
-                        no_css_error();
-                    }
-                } else {
-                    no_css_error();
-                }
-            } else if secondary_config_path.exists() {
-                let new_css = get_gtk_css(&secondary_config_path, &gtk_theme_path);
-                if let Ok(style_provider) = CssProvider::load_from_data(&new_css) {
-                    if let Some(screen) = Screen::get_default() {
-                        StyleContext::add_provider_for_screen(&screen,
-                                                              &style_provider,
-                                                              STYLE_PROVIDER_PRIORITY_APPLICATION as u32);
-                    } else {
-                        no_css_error();
-                    }
-                } else {
-                    CssProvider::load_from_data(&new_css).expect("println");
-                    no_css_error();
-                }
-            } else {
-                no_css_error();
-            }
-        }
-        Err(e) => {
-            println!("{}", e);
-        }
-    }
-}
-
-fn get_gtk_css(config_path: &Path, gtk_theme_path: &Path) -> String {
-    let mut gtk_config = String::new();
-    match File::open(config_path) {
-        Ok(ref mut f) => {
-            match f.read_to_string(&mut gtk_config) {
-                Ok(_) => {}
-                Err(_) => {
-                    println!("Could not read gtk config to string, going with defaults");
-                    gtk_config = "".to_string();
-                }
-            }
-        }
-        Err(_) => {
-            println!("Could not open gtk config");
-            gtk_config = "".to_string();
-        }
-    }
-    [gtk_config, make_import_css(gtk_theme_path)].join("\n")
-}
-
-fn make_import_css(path: &Path) -> String {
-    ["@import url(\"", double_slashes(path.to_str().unwrap()).as_str(), "\");\n"].join("")
-}
-
-fn double_slashes(p: &str) -> String {
-    p.replace("\\", "\\\\")
-}
-
-fn get_theme_dir(cwd: &Path) -> Result<PathBuf, String> {
-    let first_choice = cwd.join("..").join("themes");
-    let second_choice = cwd.join("themes");
-    if first_choice.exists() {
-        Ok(first_choice)
-    } else if second_choice.exists() {
-        Ok(second_choice)
-    } else {
-        Err("Failed to get theme dir".to_string())
-    }
-}
-
-fn no_css_error() {
-    println!("No valid GTK CSS config or gdk screen found, using gtk defaults.");
 }
