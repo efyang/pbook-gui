@@ -5,6 +5,7 @@ use std::thread;
 use threadpool::ThreadPool;
 use download::*;
 use std::time::Duration;
+use helper::Ignore;
 
 const GUI_UPDATE_TIME: usize = 10;
 
@@ -96,7 +97,7 @@ impl CommHandler {
         match &cmd.0 as &str {
             "add" => {}
             "remove" => {}
-            "stop" => self.broadcast(cmd).expect("Broadcast failed"),
+            "stop" => self.broadcast(cmd).ignore(),
             _ => {}
         }
     }

@@ -162,7 +162,7 @@ pub fn gui(data: &mut Vec<Category>,
         window.connect_delete_event(move |_, _| {
             match command_send_channel.clone().send_gui_cmd("stop".to_owned(), None) {
                 Ok(_) => {}
-                Err(e) => println!("{}", e),
+                Err(e) => println!("{:?}", e),
             }
             gtk::main_quit();
             Inhibit(false)

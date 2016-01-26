@@ -48,7 +48,7 @@ fn main() {
     thread::spawn(move || {
         loop {
             comm_handler.update();
-            thread::sleep(Duration::from_millis(0));
+            thread::sleep(Duration::new(0, 30));
         }
     });
 

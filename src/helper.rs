@@ -1,9 +1,17 @@
 use std::iter;
 
+pub trait Ignore {
+    fn ignore(&self);
+}
+
+impl<T, U> Ignore for Result<T, U> {
+    fn ignore(&self) {}
+}
+
 const BYTE_UNITS: [(f32, &'static str); 4] = [(0.0, "B"),
-                                              (1024.0, "KiB"),
-                                              (1048576.0, "MiB"),
-                                              (1073741800.0, "GiB")];
+(1024.0, "KiB"),
+(1048576.0, "MiB"),
+(1073741800.0, "GiB")];
 
 pub trait ToByteUnits {
     fn convert_to_byte_units(&self, decimal_places: usize) -> String;
