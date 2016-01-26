@@ -98,20 +98,42 @@ pub fn gui(data: &mut Vec<Category>,
                                                               AddMode::PackEnd,
                                                               1);
     categoryview.set_model(Some(&category_store));
-
-    toggle_cell.connect_toggled(move |_, path| {
-        let iter = category_store.get_iter(&path).expect("Invalid TreePath");
-        let current_value = category_store.get_value(&iter, 1)
-                                          .get::<bool>()
-                                          .expect("No Value");
-        let new_value = Value::from(!current_value);
-        category_store.set_value(&iter, 1, &new_value);
-    });
-    // treepath references the main list of categories ->
-    // if depth == 1 then get list of downloads from the category and send messages with all the
-    // hashes
-    // if depth == 2 then just send the hash of the individual download
-
+    
+    {   
+        let data = data.clone();
+        let command_send_channel = command_send_channel.clone();
+        toggle_cell.connect_toggled(move |_, path| {
+            // First send message, then update visually - more informative
+            let indices = path.get_indices();
+            let ref category = data[indices[0] as usize];
+            // Update data and the view
+            match path.get_depth() {
+                1 => {
+                    println!("Category");
+                    for download in category.get_downloads().iter() {
+                        println!("{:#?}", download);
+                    }
+                }
+                2 => {
+                    println!("Download");
+                    let ref download = category.get_download_at_idx(indices[1] as usize);
+                    println!("{:#?}", download);
+                }
+                _ => {}
+            }
+            let iter = category_store.get_iter(&path).expect("Invalid TreePath");
+            let current_value = category_store.get_value(&iter, 1)
+                                              .get::<bool>()
+                                              .expect("No Value");
+            let new_value = Value::from(!current_value);
+            category_store.set_value(&iter, 1, &new_value);
+        });
+        // treepath references the main list of categories ->
+        // if depth == 1 then get list of downloads from the category and send messages with all the
+        // hashes
+        // if depth == 2 then just send the hash of the individual download
+    }
+    
     let category_scroll = gtk::ScrolledWindow::new(None, None);
     category_scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
     category_scroll.add(&categoryview);
@@ -137,7 +159,7 @@ trait AddCategories {
 impl AddCategories for gtk::TreeStore {
     fn add_category(&self, category: &Category) {
         let category_name = category.get_name();
-        let downloads = category.downloads();
+        let downloads = category.get_downloads();
         let iter = self.append(None);
         let category_download_bool = Value::from(category.is_enabled());
         self.set_value(&iter, 0, &Value::from(category_name));

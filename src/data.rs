@@ -26,7 +26,7 @@ impl ToDownloads for Vec<Category> {
     fn to_downloads(&self) -> Vec<Download> {
         let mut downloads = Vec::new();
         for category in self.iter() {
-            downloads.extend(category.downloads().iter().cloned());
+            downloads.extend(category.get_downloads().iter().cloned());
         }
         downloads
     }
@@ -89,7 +89,7 @@ impl Category {
         Err(format!("No such download id {} exists.", download_id))
     }
 
-    pub fn downloads(&self) -> &[Download] {
+    pub fn get_downloads(&self) -> &[Download] {
         &self.downloads
     }
 
@@ -105,6 +105,10 @@ impl Category {
 
     pub fn get_ids(&self) -> Vec<u64> {
         self.downloads.iter().map(|dl| dl.get_id()).collect::<Vec<u64>>()
+    }
+
+    pub fn get_download_at_idx(&self, idx: usize) -> &Download {
+        &self.downloads[idx]
     }
 }
 
