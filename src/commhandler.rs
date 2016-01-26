@@ -92,7 +92,7 @@ impl CommHandler {
     }
 
     fn handle_gui_cmd(&mut self, cmd: GuiCmdMsg) {
-        println!("{}", cmd);
+        println!("{:?}", cmd);
         match &cmd.0 as &str {
             "add" => {}
             "remove" => {}
