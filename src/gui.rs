@@ -6,6 +6,7 @@ use std::env;
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashMap;
 use glib::types::Type;
+use glib::translate::ToGlibPtr;
 use helper::*;
 use cellrenderers::*;
 use theme::*;
@@ -96,12 +97,20 @@ pub fn gui(data: &mut Vec<Category>,
                                                               false,
                                                               AddMode::PackEnd,
                                                               1);
-    toggle_cell.connect_toggled(|_, path| println!("{}", path));
+    categoryview.set_model(Some(&category_store));
+
+    toggle_cell.connect_toggled(move |_, path| {
+        let iter = category_store.get_iter(&path).expect("Invalid TreePath");
+        let current_value = category_store.get_value(&iter, 1)
+                                          .get::<bool>()
+                                          .expect("No Value");
+        let new_value = Value::from(!current_value);
+        category_store.set_value(&iter, 1, &new_value);
+    });
     // treepath references the main list of categories ->
     // if depth == 1 then get list of downloads from the category and send messages with all the
     // hashes
     // if depth == 2 then just send the hash of the individual download
-    categoryview.set_model(Some(&category_store));
 
     let category_scroll = gtk::ScrolledWindow::new(None, None);
     category_scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
