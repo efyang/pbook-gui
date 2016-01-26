@@ -11,6 +11,15 @@ use helper::*;
 use cellrenderers::*;
 use theme::*;
 
+// DownloadUpdate {
+// Message(String),
+// Amount(usize),
+// }
+
+// TpoolProgressMsg = (u64, DownloadUpdate);
+// GuiCmdMsg = (String, Option<u64>);
+// TpoolCmdMsg = GuiCmdMsg;
+
 pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<Vec<Download>>,
            command_send_channel: Sender<(String, Option<u64>)>) {
@@ -42,11 +51,6 @@ pub fn gui(data: &mut Vec<Category>,
     window.set_border_width(10);
     window.set_position(gtk::WindowPosition::Center);
     window.set_default_size(1000, 500);
-
-    window.connect_delete_event(|_, _| {
-        gtk::main_quit();
-        Inhibit(false)
-    });
 
     // placeholder values
     for category in data.iter_mut() {
@@ -98,8 +102,9 @@ pub fn gui(data: &mut Vec<Category>,
                                                               AddMode::PackEnd,
                                                               1);
     categoryview.set_model(Some(&category_store));
-    
-    {   
+
+    // on toggle
+    {
         let data = data.clone();
         let command_send_channel = command_send_channel.clone();
         toggle_cell.connect_toggled(move |_, path| {
@@ -109,15 +114,20 @@ pub fn gui(data: &mut Vec<Category>,
             // Update data and the view
             match path.get_depth() {
                 1 => {
-                    println!("Category");
+                    let category = category.to_owned();
                     for download in category.get_downloads().iter() {
-                        println!("{:#?}", download);
+                        if let Err(error) = update_download(command_send_channel.clone(),
+                                                            download.to_owned()) {
+                            println!("{}", error);
+                        }
                     }
                 }
                 2 => {
-                    println!("Download");
-                    let ref download = category.get_download_at_idx(indices[1] as usize);
-                    println!("{:#?}", download);
+                    let download = category.get_download_at_idx(indices[1] as usize);
+                    if let Err(error) = update_download(command_send_channel.clone(),
+                                                        download.to_owned()) {
+                        println!("{}", error);
+                    }
                 }
                 _ => {}
             }
@@ -133,7 +143,7 @@ pub fn gui(data: &mut Vec<Category>,
         // hashes
         // if depth == 2 then just send the hash of the individual download
     }
-    
+
     let category_scroll = gtk::ScrolledWindow::new(None, None);
     category_scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
     category_scroll.add(&categoryview);
@@ -147,8 +157,45 @@ pub fn gui(data: &mut Vec<Category>,
     lists_holder.pack_end(&download_box, true, true, 0);
     window.add(&lists_holder);
 
+    {
+        let command_send_channel = command_send_channel.clone();
+        window.connect_delete_event(move |_, _| {
+            match command_send_channel.clone().send_gui_cmd("stop".to_owned(), None) {
+                Ok(_) => {}
+                Err(e) => println!("{}", e),
+            }
+            gtk::main_quit();
+            Inhibit(false)
+        });
+    }
+
     window.show_all();
     gtk::main();
+}
+
+// result should be displayed in status bar if error
+fn update_download(sender: Sender<GuiCmdMsg>, download: Download) -> Result<(), String> {
+    let id = download.get_id();
+    let message;
+    if download.is_enabled() {
+        message = "remove";
+    } else {
+        message = "add";
+    }
+    sender.send_gui_cmd(message.to_owned(), Some(id))
+}
+
+trait CmdSend {
+    fn send_gui_cmd(&self, cmd: String, id: Option<u64>) -> Result<(), String>;
+}
+
+impl CmdSend for Sender<GuiCmdMsg> {
+    fn send_gui_cmd(&self, cmd: String, id: Option<u64>) -> Result<(), String> {
+        match self.send((cmd, id)) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("{}", e)),
+        }
+    }
 }
 
 trait AddCategories {

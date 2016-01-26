@@ -49,8 +49,10 @@ impl CommHandler {
     pub fn update(&mut self) {
         // handle gui cmd
         match self.gui_cmd_recv.try_recv() {
-            Ok(cmd) => {}
-            Err(e) => {}
+            Ok(cmd) => self.handle_gui_cmd(cmd),
+            Err(_) => {
+                // No message in queue
+            }
         }
 
         // handle threadpool message
@@ -63,26 +65,39 @@ impl CommHandler {
 
         // start execution of any jobs that exist
         if !self.jobs.is_empty() && self.free_threads > 0 {
-            //let job = self.jobs.pop().unwrap();
+            // let job = self.jobs.pop().unwrap();
             let mut job = self.jobs.pop().unwrap();
             job.start_download();
             let progress_sender = self.threadpool_progress_send.clone();
             let (tchan_cmd_s, tchan_cmd_r) = channel();
             self.threadpool_cmd_send.push(tchan_cmd_s);
-            let mut downloader = Downloader::new(job, tchan_cmd_r, progress_sender, Path::new("./testing"));
+            let mut downloader = Downloader::new(job,
+                                                 tchan_cmd_r,
+                                                 progress_sender,
+                                                 Path::new("./testing"));
             self.threadpool.execute(move || {
                 for _ in 0..1000000 {
-                    //progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();
+                    // progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();
                     // need sleep or there will be a memory overflow -> read more than one byte?
                     match downloader.update() {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(e) => panic!(e),
                     }
-                    
+
                     thread::sleep(Duration::from_millis(2));
                 }
             });
             self.free_threads -= 1;
+        }
+    }
+
+    fn handle_gui_cmd(&mut self, cmd: GuiCmdMsg) {
+        println!("{}", cmd);
+        match &cmd.0 as &str {
+            "add" => {}
+            "remove" => {}
+            "stop" => self.broadcast(cmd).expect("Broadcast failed"),
+            _ => {}
         }
     }
 
@@ -100,9 +115,7 @@ impl CommHandler {
         self.free_threads += 1;
     }
 
-    fn broadcast(&self,
-                 msg: (String, Option<u64>))
-                 -> Result<(), SendError<(String, Option<u64>)>> {
+    fn broadcast(&self, msg: TpoolCmdMsg) -> Result<(), SendError<(String, Option<u64>)>> {
         for channel in self.threadpool_cmd_send.iter() {
             let sendresult = channel.send(msg.clone());
             if sendresult.is_err() {
