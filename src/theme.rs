@@ -55,6 +55,7 @@ pub fn setup_theme(current_working_dir: &Path,
                     }
                 }
             }
+            gtk_theme = gtk_theme.trim().to_owned();
             let gtk_theme_path = theme_dir.join(gtk_theme).join("gtk.css");
             if default_config_path.exists() {
                 let new_css = get_gtk_css(&default_config_path, &gtk_theme_path);
@@ -80,7 +81,6 @@ pub fn setup_theme(current_working_dir: &Path,
                         no_css_error();
                     }
                 } else {
-                    CssProvider::load_from_data(&new_css).expect("println");
                     no_css_error();
                 }
             } else {
