@@ -50,6 +50,7 @@ pub fn main() {
                               double_slashes(pbook_data_path.to_str().unwrap()));
     include_file.write_all(include_str.as_bytes())
                 .expect("Failed to write include_str to include.rs");
+    build_launcher(&src_dir, &dist_dir);
     if cfg!(windows) {
         let download_link;
         let lib_name;
@@ -144,6 +145,31 @@ pub fn main() {
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }
+    }
+}
+
+fn build_launcher(src_dir: &Path, dist_dir: &Path) {
+    if cfg!(windows) {
+        Command::new("g++")
+            .arg(src_dir.join("launcher.cpp").to_str().unwrap())
+            .arg("-o")
+            .arg(dist_dir.join("pbook-launcher.exe").to_str().unwrap())
+            .arg("-Os")
+            .arg("-mwindows")
+            .arg("-static")
+            .arg("-static-libstdc++")
+            .output()
+            .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
+    } else {
+        Command::new("g++")
+            .arg(src_dir.join("launcher.cpp").to_str().unwrap())
+            .arg("-o")
+            .arg(dist_dir.join("pbook-launcher").to_str().unwrap())
+            .arg("-Os")
+            .arg("-static")
+            .arg("-static-libstdc++")
+            .output()
+            .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
     }
 }
 
@@ -294,7 +320,6 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
                                        .join("common")
                                        .join("gtk-3.0")
                                        .join("3.18");
-            println!("{:?}", &theme_root);
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained.css")], &theme_out);
             rename(theme_out.join("gtk-contained.css"),
@@ -367,7 +392,6 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
     copy_dir(&theme_out_dir.to_path_buf(), &dist_dir.join("themes"))
         .expect("Failed to copy themes");
 }
-
 fn remove_all_css_besides(noremove: &Vec<&Path>, dir: &Path) {
     for entry in dir.read_dir().unwrap() {
         let entrypath = entry.expect("Failed while reading dir").path();
