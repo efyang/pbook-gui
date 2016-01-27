@@ -18,6 +18,8 @@ num_cpus = "0.2"
 comm = {git = "https://github.com/mahkoh/comm"}
 time = "0.1"
 libc = "0.1"
+tiny-keccak = "1.0.3"
+rustc-serialize = "0.3.16"
 
 [build-dependencies]
 hyper = "0.7.1"
@@ -28,7 +30,7 @@ rustc-serialize = "0.3.16"
 default = ["set-arc"]
 # Write theme config to gtktheme.txt in output dir
 # override hierarchy if all-themes and some theme given
-all-themes = ["arc"]
+all-themes = ["arc", "arc-darker", "arc-dark", "arc-solid", "arc-darker-solid", "arc-dark-solid", "iris-light", "iris-dark"]
 # If multiple themes given, use hierarchy
 arc = []
 arc-darker = []
