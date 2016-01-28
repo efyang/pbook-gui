@@ -32,7 +32,7 @@ pub fn main() {
     // store pbooks.md file to include.rs
     let current_exe_path = env::current_exe().unwrap();
     let current_exe_dir = current_exe_path.parent().unwrap();
-    
+
     let manifest_dir = current_exe_dir.join("..").join("..");
     let src_dir = manifest_dir.join("src");
     let gtk_css_path = src_dir.join("gtk.css");
@@ -41,15 +41,6 @@ pub fn main() {
     let out_dir = current_exe_dir;
     let dist_dir = out_dir.join("programming-book-downloader");
     let bin_dir = dist_dir.join("bin");
-
-    let mut include_file = File::create(src_dir.join("include.rs"))
-                               .expect("Failed to create \"include.rs\" file");
-    let pbook_data_path = resource_dir.join("free-programming-books")
-                                      .join("free-programming-books.md");
-    let include_str = format!("pub const RAW_DATA: &'static str = include_str!(\"{}\");",
-                              double_slashes(pbook_data_path.to_str().unwrap()));
-    include_file.write_all(include_str.as_bytes())
-                .expect("Failed to write include_str to include.rs");
     build_launcher(&src_dir, &dist_dir);
     if cfg!(windows) {
         let download_link;
@@ -71,16 +62,16 @@ pub fn main() {
         let dlout = deps.join(lib_name);
         create_dir_all(deps.clone()).expect("Failed to make dir \"deps\"");
         let zpath = build_util_path.join("7z")
-                                   .join(arch)
-                                   .join("7za.exe");
+            .join(arch)
+            .join("7za.exe");
         // lib file doesnt exist or checksum is incorrect -> redownload
         if !(dlout.exists() && &file_sha3_hash(&dlout).unwrap_or("".to_string()) == LIB_CHECKSUM) {
             let mut outfile = BufWriter::new(File::create(dlout.clone())
-                                                 .expect("Failed to make gtk.7z file"));
+                                             .expect("Failed to make gtk.7z file"));
             let stream = try_until_stream(download_link, 5);
             for byte in stream.bytes() {
                 outfile.write(&[byte.unwrap()])
-                       .expect(&format!("Failed to write to {}", lib_name));
+                    .expect(&format!("Failed to write to {}", lib_name));
             }
             outfile.flush().expect(&format!("Failed to flush to {}", lib_name));
             drop(outfile);
@@ -93,7 +84,7 @@ pub fn main() {
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }
-        
+
         // create the dist dir
         create_dir_all(bin_dir.clone()).expect("Failed to create bin dir");
         copy_dir(&deps.join(format!("lib{}", bitsize)), &bin_dir)
@@ -108,12 +99,12 @@ pub fn main() {
             copy(main_path, &new_main_path).expect("Failed to copy main executable");
             // set icon
             let rcedit_path = manifest_dir.join("build")
-                                          .join("utils")
-                                          .join("rcedit")
-                                          .join("rcedit.exe");
+                .join("utils")
+                .join("rcedit")
+                .join("rcedit.exe");
             let icon_path = manifest_dir.join("resources")
-                                        .join("icons")
-                                        .join("pbook.ico");
+                .join("icons")
+                .join("pbook.ico");
             set_icon(&rcedit_path, &new_launcher_path, &icon_path);
             set_icon(&rcedit_path, &new_main_path, &icon_path);
             // zip it all up
@@ -138,10 +129,10 @@ pub fn main() {
             delete_if_exists(&archive_path);
             Command::new("tar")
                 .args(&["cfJ",
-                        archive_path.to_str().unwrap(),
-                        "-C",
-                        out_dir.to_str().unwrap(),
-                        "programming-book-downloader"])
+                      archive_path.to_str().unwrap(),
+                      "-C",
+                      out_dir.to_str().unwrap(),
+                      "programming-book-downloader"])
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }
@@ -186,107 +177,107 @@ fn add_themes(manifest_dir: &Path, out_dir: &Path, dist_dir: &Path) {
     delete_if_exists(&out_dir.join("themes"));
     delete_if_exists(&dist_dir.join("themes"));
     if cfg!(feature = "all-themes") || cfg!(feature = "arc") || cfg!(feature = "arc-darker") ||
-       cfg!(feature = "arc-dark") ||
-       cfg!(feature = "arc-solid") || cfg!(feature = "arc-darker-solid") ||
-       cfg!(feature = "arc-dark-solid") || cfg!(feature = "iris-light") ||
-       cfg!(feature = "iris-dark") {
-        let theme_dir = out_dir.join("themes");
-        create_dir_all(theme_dir.clone()).expect("Failed to create theme dir");
-        let theme_file = out_dir.join("theme.txt");
-        let mut theme_file_handle = File::create(theme_file).expect("Failed to create theme.txt");
-        let theme;
-        if cfg!(feature = "all-themes") {
-            // copy all themes
-            // theme should be active -> write it to theme.txt
-            if cfg!(feature = "set-arc-darker") {
-                theme = "arc-darker";
-            } else if cfg!(feature = "set-arc-dark") {
-                theme = "arc-dark";
-            } else if cfg!(feature = "set-arc-solid") {
-                theme = "arc-solid";
-            } else if cfg!(feature = "set-arc-darker-solid") {
-                theme = "arc-darker-solid";
-            } else if cfg!(feature = "set-arc-dark-solid") {
-                theme = "arc-dark-solid";
-            } else if cfg!(feature = "set-iris-light") {
-                theme = "iris-light";
-            } else if cfg!(feature = "set-iris-dark") {
-                theme = "iris-dark";
-            } else {
-                theme = "arc";
-            }
-            copy_themes(&manifest_dir.join("resources").join("themes"),
-                        &theme_dir,
-                        dist_dir,
-                        &vec!["arc",
-                              "arc-darker",
-                              "arc-dark",
-                              "arc-solid",
-                              "arc-darker-solid",
-                              "arc-dark-solid",
-                              "iris-light",
-                              "iris-dark"]);
-        } else {
-            let mut themes = Vec::new();
-            let mut tmp_theme = "arc";
-            if cfg!(feature = "arc") {
-                themes.push("arc");
-            }
-            if cfg!(feature = "arc-darker") {
-                tmp_theme = "arc-darker";
-                themes.push("arc-darker");
-            }
-            if cfg!(feature = "arc-dark") {
-                tmp_theme = "arc-dark";
-                themes.push("arc-dark");
-            }
-            if cfg!(feature = "arc-solid") {
-                tmp_theme = "arc-solid";
-                themes.push("arc-solid");
-            }
-            if cfg!(feature = "arc-darker-solid") {
-                tmp_theme = "arc-darker-solid";
-                themes.push("arc-darker-solid");
-            }
-            if cfg!(feature = "arc-dark-solid") {
-                tmp_theme = "arc-dark-solid";
-                themes.push("arc-dark-solid");
-            }
-            if cfg!(feature = "iris-light") {
-                tmp_theme = "iris-light";
-                themes.push("iris-light");
-            }
-            if cfg!(feature = "iris-dark") {
-                tmp_theme = "iris-dark";
-                themes.push("iris-dark");
-            }
+        cfg!(feature = "arc-dark") ||
+            cfg!(feature = "arc-solid") || cfg!(feature = "arc-darker-solid") ||
+            cfg!(feature = "arc-dark-solid") || cfg!(feature = "iris-light") ||
+            cfg!(feature = "iris-dark") {
+                let theme_dir = out_dir.join("themes");
+                create_dir_all(theme_dir.clone()).expect("Failed to create theme dir");
+                let theme_file = out_dir.join("theme.txt");
+                let mut theme_file_handle = File::create(theme_file).expect("Failed to create theme.txt");
+                let theme;
+                if cfg!(feature = "all-themes") {
+                    // copy all themes
+                    // theme should be active -> write it to theme.txt
+                    if cfg!(feature = "set-arc-darker") {
+                        theme = "arc-darker";
+                    } else if cfg!(feature = "set-arc-dark") {
+                        theme = "arc-dark";
+                    } else if cfg!(feature = "set-arc-solid") {
+                        theme = "arc-solid";
+                    } else if cfg!(feature = "set-arc-darker-solid") {
+                        theme = "arc-darker-solid";
+                    } else if cfg!(feature = "set-arc-dark-solid") {
+                        theme = "arc-dark-solid";
+                    } else if cfg!(feature = "set-iris-light") {
+                        theme = "iris-light";
+                    } else if cfg!(feature = "set-iris-dark") {
+                        theme = "iris-dark";
+                    } else {
+                        theme = "arc";
+                    }
+                    copy_themes(&manifest_dir.join("resources").join("themes"),
+                    &theme_dir,
+                    dist_dir,
+                    &vec!["arc",
+                    "arc-darker",
+                    "arc-dark",
+                    "arc-solid",
+                    "arc-darker-solid",
+                    "arc-dark-solid",
+                    "iris-light",
+                    "iris-dark"]);
+                } else {
+                    let mut themes = Vec::new();
+                    let mut tmp_theme = "arc";
+                    if cfg!(feature = "arc") {
+                        themes.push("arc");
+                    }
+                    if cfg!(feature = "arc-darker") {
+                        tmp_theme = "arc-darker";
+                        themes.push("arc-darker");
+                    }
+                    if cfg!(feature = "arc-dark") {
+                        tmp_theme = "arc-dark";
+                        themes.push("arc-dark");
+                    }
+                    if cfg!(feature = "arc-solid") {
+                        tmp_theme = "arc-solid";
+                        themes.push("arc-solid");
+                    }
+                    if cfg!(feature = "arc-darker-solid") {
+                        tmp_theme = "arc-darker-solid";
+                        themes.push("arc-darker-solid");
+                    }
+                    if cfg!(feature = "arc-dark-solid") {
+                        tmp_theme = "arc-dark-solid";
+                        themes.push("arc-dark-solid");
+                    }
+                    if cfg!(feature = "iris-light") {
+                        tmp_theme = "iris-light";
+                        themes.push("iris-light");
+                    }
+                    if cfg!(feature = "iris-dark") {
+                        tmp_theme = "iris-dark";
+                        themes.push("iris-dark");
+                    }
 
-            if cfg!(feature = "set-arc-darker") {
-                tmp_theme = "arc-darker";
-            } else if cfg!(feature = "set-arc-dark") {
-                tmp_theme = "arc-dark";
-            } else if cfg!(feature = "set-arc-solid") {
-                tmp_theme = "arc-solid";
-            } else if cfg!(feature = "set-arc-darker-solid") {
-                tmp_theme = "arc-darker-solid";
-            } else if cfg!(feature = "set-arc-dark-solid") {
-                tmp_theme = "arc-dark-solid";
-            } else if cfg!(feature = "set-iris-light") {
-                tmp_theme = "iris-light";
-            } else if cfg!(feature = "set-iris-dark") {
-                tmp_theme = "iris-dark";
+                    if cfg!(feature = "set-arc-darker") {
+                        tmp_theme = "arc-darker";
+                    } else if cfg!(feature = "set-arc-dark") {
+                        tmp_theme = "arc-dark";
+                    } else if cfg!(feature = "set-arc-solid") {
+                        tmp_theme = "arc-solid";
+                    } else if cfg!(feature = "set-arc-darker-solid") {
+                        tmp_theme = "arc-darker-solid";
+                    } else if cfg!(feature = "set-arc-dark-solid") {
+                        tmp_theme = "arc-dark-solid";
+                    } else if cfg!(feature = "set-iris-light") {
+                        tmp_theme = "iris-light";
+                    } else if cfg!(feature = "set-iris-dark") {
+                        tmp_theme = "iris-dark";
+                    }
+                    theme = tmp_theme;
+                    copy_themes(&manifest_dir.join("resources").join("themes"),
+                    &theme_dir,
+                    dist_dir,
+                    &themes);
+                }
+                theme_file_handle.write_all(theme.as_bytes()).expect("Failed to write theme to theme.txt");
+                drop(theme_file_handle);
+                copy(out_dir.join("theme.txt"), dist_dir.join("theme.txt"))
+                    .expect("Failed to copy themes.txt");
             }
-            theme = tmp_theme;
-            copy_themes(&manifest_dir.join("resources").join("themes"),
-                        &theme_dir,
-                        dist_dir,
-                        &themes);
-        }
-        theme_file_handle.write_all(theme.as_bytes()).expect("Failed to write theme to theme.txt");
-        drop(theme_file_handle);
-        copy(out_dir.join("theme.txt"), dist_dir.join("theme.txt"))
-            .expect("Failed to copy themes.txt");
-    }
 }
 
 fn file_sha3_hash(path: &Path) -> Result<String, std::io::Error> {
@@ -317,75 +308,75 @@ fn copy_themes(theme_root_dir: &Path, theme_out_dir: &Path, dist_dir: &Path, the
         let theme_out = theme_out_dir.join(theme_name);
         if theme_name == &"arc" {
             theme_root = theme_root_dir.join("Arc-theme")
-                                       .join("common")
-                                       .join("gtk-3.0")
-                                       .join("3.18");
+                .join("common")
+                .join("gtk-3.0")
+                .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained.css")], &theme_out);
             rename(theme_out.join("gtk-contained.css"),
-                   theme_out.join("gtk.css"))
+            theme_out.join("gtk.css"))
                 .expect("Failed to rename");
         } else if theme_name == &"arc-darker" {
             theme_root = theme_root_dir.join("Arc-theme")
-                                       .join("common")
-                                       .join("gtk-3.0")
-                                       .join("3.18");
+                .join("common")
+                .join("gtk-3.0")
+                .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-darker.css")],
-                                   &theme_out);
+            &theme_out);
             rename(theme_out.join("gtk-contained-darker.css"),
-                   theme_out.join("gtk.css"))
+            theme_out.join("gtk.css"))
                 .expect("Failed to rename");
         } else if theme_name == &"arc-dark" {
             theme_root = theme_root_dir.join("Arc-theme")
-                                       .join("common")
-                                       .join("gtk-3.0")
-                                       .join("3.18");
+                .join("common")
+                .join("gtk-3.0")
+                .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-dark.css")], &theme_out);
             rename(theme_out.join("gtk-contained-dark.css"),
-                   theme_out.join("gtk.css"))
+            theme_out.join("gtk.css"))
                 .expect("Failed to rename");
         } else if theme_name == &"arc-solid" {
             theme_root = theme_root_dir.join("Arc-theme")
-                                       .join("common")
-                                       .join("gtk-3.0")
-                                       .join("3.18");
+                .join("common")
+                .join("gtk-3.0")
+                .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid.css")],
-                                   &theme_out);
+            &theme_out);
             rename(theme_out.join("gtk-contained-solid.css"),
-                   theme_out.join("gtk.css"))
+            theme_out.join("gtk.css"))
                 .expect("Failed to rename");
         } else if theme_name == &"arc-darker-solid" {
             theme_root = theme_root_dir.join("Arc-theme")
-                                       .join("common")
-                                       .join("gtk-3.0")
-                                       .join("3.18");
+                .join("common")
+                .join("gtk-3.0")
+                .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid-darker.css")],
-                                   &theme_out);
+            &theme_out);
             rename(theme_out.join("gtk-contained-solid-darker.css"),
-                   theme_out.join("gtk.css"))
+            theme_out.join("gtk.css"))
                 .expect("Failed to rename");
         } else if theme_name == &"arc-dark-solid" {
             theme_root = theme_root_dir.join("Arc-theme")
-                                       .join("common")
-                                       .join("gtk-3.0")
-                                       .join("3.18");
+                .join("common")
+                .join("gtk-3.0")
+                .join("3.18");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir arc");
             remove_all_css_besides(&vec![&theme_out.join("gtk-contained-solid-dark.css")],
-                                   &theme_out);
+            &theme_out);
             rename(theme_out.join("gtk-contained-solid-dark.css"),
-                   theme_out.join("gtk.css"))
+            theme_out.join("gtk.css"))
                 .expect("Failed to rename");
         } else if theme_name == &"iris-light" {
             theme_root = theme_root_dir.join("iris-light")
-                                       .join("gtk-3.0");
+                .join("gtk-3.0");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir iris-light");
         } else if theme_name == &"iris-dark" {
             theme_root = theme_root_dir.join("iris")
-                                       .join("gtk-3.0");
+                .join("gtk-3.0");
             copy_dir(&theme_root, &theme_out).expect("Failed to copy dir iris-dark");
         }
     }
@@ -458,16 +449,4 @@ fn try_until_stream(link: &str, maxtimes: usize) -> Response {
         Some(r) => r,
         None => panic!("Failed to connect"),
     }
-}
-
-#[cfg(windows)]
-fn double_slashes(path: &str) -> String {
-    path.replace("\\\\\\\\", "\\")
-        .replace("\\\\\\", "\\")
-        .replace("\\\\", "\\")
-        .replace("\\", "\\\\")
-}
-#[cfg(not(windows))]
-fn double_slashes(path: &str) -> String {
-    path.to_string()
 }
