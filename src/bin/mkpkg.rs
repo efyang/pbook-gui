@@ -16,10 +16,10 @@ use hyper::client::response::Response;
 
 // keccak-224 hash
 #[cfg(target_pointer_width = "32")]
-const LIB_CHECKSUM: &'static str = "a8cbe4f2f60d2f2013babab09a467129d846e8d833895ae5711845e4";
+const LIB_CHECKSUM: &'static str = "3ce40c5bf0dfa7015c1d49bf2d588cff62bc984d1a94d737c0108f64";
 
 #[cfg(target_pointer_width = "64")]
-const LIB_CHECKSUM: &'static str = "da79d49ed03ae6695d9cf22f259937d839ae6b7971b3c184352e2fcc";
+const LIB_CHECKSUM: &'static str = "921fe50cae83e465e09aa15b1506f6dc2b7e55cc35f550f666b71491";
 
 pub fn main() {
     // update git submodule
