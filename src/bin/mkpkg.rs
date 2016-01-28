@@ -57,12 +57,12 @@ pub fn main() {
         let arch;
         let bitsize;
         if cfg!(target_pointer_width = "32") {
-            download_link = "https://github.com/honorabrutroll/mingw-gtk/raw/master/lib32.7z";
+            download_link = "https://github.com/honorabrutroll/pbook-gui-deps/raw/master/lib32.7z";
             lib_name = "gtk32.7z";
             arch = "x86";
             bitsize = "32";
         } else {
-            download_link = "https://github.com/honorabrutroll/mingw-gtk/raw/master/lib64.7z";
+            download_link = "https://github.com/honorabrutroll/pbook-gui-deps/raw/master/lib64.7z";
             lib_name = "gtk64.7z";
             arch = "x64";
             bitsize = "64";
