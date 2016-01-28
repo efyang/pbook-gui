@@ -138,10 +138,6 @@ pub fn gui(data: &mut Vec<Category>,
             let new_value = Value::from(!current_value);
             category_store.set_value(&iter, 1, &new_value);
         });
-        // treepath references the main list of categories ->
-        // if depth == 1 then get list of downloads from the category and send messages with all the
-        // hashes
-        // if depth == 2 then just send the hash of the individual download
     }
 
     let category_scroll = gtk::ScrolledWindow::new(None, None);

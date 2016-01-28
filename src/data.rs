@@ -94,7 +94,7 @@ impl Category {
     }
 
     pub fn is_enabled(&self) -> bool {
-        self.downloads.iter().all(|x| x.is_downloading())
+        self.downloads.iter().all(|x| x.is_enabled())
     }
 
     pub fn begin_downloading_all(&mut self) {
