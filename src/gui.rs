@@ -4,6 +4,7 @@ use gtk::prelude::*;
 use gtk::{Orientation, Value};
 use std::env;
 use std::sync::mpsc::{Sender, Receiver};
+use std::sync::Mutex;
 use std::collections::HashMap;
 use std::cell::RefCell;
 use glib::types::Type;
@@ -58,14 +59,12 @@ pub fn gui(data: &mut Vec<Category>,
         category.set_enable_state_all(true);
         category.begin_downloading_all();
     }
-
-    unsafe {
-        DOWNLOADS = data.to_downloads();
-    }    
-    let infoitems = initial_liststore_model(&DOWNLOADS);
+    
+    *DOWNLOADS.lock().unwrap() = data.to_downloads();
+    let infoitems = initial_liststore_model(&*DOWNLOADS.lock().unwrap());
     // main rendering
     let button = gtk::Button::new_with_label("Click me!");
-
+    
     let downloadview = gtk::TreeView::new();
     // name, size, progress, speed, eta
     let download_column_types = [Type::String, Type::String, Type::F32, Type::String, Type::String];
@@ -85,7 +84,7 @@ pub fn gui(data: &mut Vec<Category>,
 
     // Setup TLS
     GTK_GLOBAL.with(move |gtk_global| {
-        *gtk_global.borrow_mut() = Some((&mut DOWNLOADS, download_store, update_recv_channel));
+        *gtk_global.borrow_mut() = Some((download_store, update_recv_channel));
     });
 
     // add the scroll
@@ -177,22 +176,20 @@ pub fn gui(data: &mut Vec<Category>,
     gtk::main();
 }
 
-// static mut DOWNLOADS: Vec<Download> = vec!();
-
 lazy_static! {
-    static ref DOWNLOADS: Vec<Download> = Vec::new();
+    static ref DOWNLOADS: Mutex<Vec<Download>> = Mutex::new(Vec::new());
 }
 
 // Threadlocal storage of Gtk Stuff
 thread_local!(
     // (main data, download store, message receiver)
-    static GTK_GLOBAL: RefCell<Option<(&'static mut Vec<Download>, gtk::ListStore, Receiver<Vec<Download>>)>> = RefCell::new(None)
+    static GTK_GLOBAL: RefCell<Option<(gtk::ListStore, Receiver<Vec<Download>>)>> = RefCell::new(None)
     );
 
 // update TLS
 pub fn update_local() -> Continue {
     GTK_GLOBAL.with(|gtk_global| {
-        if let Some((ref mut main_data, ref download_store, ref rx)) = *gtk_global.borrow() {
+        if let Some((ref download_store, ref rx)) = *gtk_global.borrow() {
             if let Ok(update) = rx.try_recv() {
                 // placeholder
                 println!("Got update message");
