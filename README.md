@@ -9,17 +9,19 @@ This project aims to provide a gui to allow users to select and download files f
     - adequate directory structure ☑
     - fairly easily themable ☑
     - swappable themes while in gui ☐
-    - categories on side ☐
-    - list of downloads ☐
-        - name ☐
-        - progress bar ☐
-        - ETA ☐
-        - speed (use XiB notation) ☐
+    - categories on side ☑
+    - list of downloads ☑
+        - name ☑
+            - ellipsized (needs PR) ☐
+        - progress bar ☑
+        - ETA ☑
+        - speed (use XiB notation) ☑
+        - updating ☐
 - parallel downloads ☐
-    - thread pool based ☐
+    - thread pool based ☑
     - number of threads changeable while executing ☐
     - pausable ☐
-    - low cpu usage ☐
+    - low cpu usage ☑
     - speed should be at max possible ☐
     - Optional - if available, use coroutines
 - logging ☐
