@@ -213,7 +213,7 @@ impl AddCategories for gtk::TreeStore {
             let download_download_bool = Value::from(download.is_enabled());
             let child_iter = self.append(Some(&iter));
             self.set_value(&child_iter, 0, &Value::from(download_name));
-            self.set_value(&iter, 1, &download_download_bool);
+            self.set_value(&child_iter, 1, &download_download_bool);
         }
     }
 
