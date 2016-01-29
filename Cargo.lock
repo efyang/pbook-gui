@@ -7,6 +7,7 @@ dependencies = [
  "gtk 0.0.7 (git+https://github.com/honorabrutroll/gtk)",
  "gtk-sys 0.2.0 (git+https://github.com/gtk-rs/sys)",
  "hyper 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "lazy_static 0.1.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "num_cpus 0.2.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",

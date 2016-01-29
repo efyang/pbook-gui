@@ -19,6 +19,7 @@ time = "0.1"
 libc = "0.1"
 tiny-keccak = "1.0.3"
 rustc-serialize = "0.3.16"
+lazy_static = "0.1.15"
 
 [features]
 default = ["set-arc"]

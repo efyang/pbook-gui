@@ -6,12 +6,12 @@ use threadpool::ThreadPool;
 use download::*;
 use std::time::Duration;
 use helper::Ignore;
+use gui::update_local;
 
 const GUI_UPDATE_TIME: usize = 10;
 
 pub struct CommHandler {
     threadpool: ThreadPool,
-    free_threads: isize,
     data: Vec<Download>,
     jobs: Vec<Download>,
     datacache: HashMap<u64, usize>,
@@ -30,22 +30,21 @@ impl CommHandler {
     pub fn new(basethreads: usize,
                start_data: Vec<Download>,
                guichannels: (Sender<Vec<Download>>, Receiver<(String, Option<u64>)>))
-               -> CommHandler {
-        let (progress_s, progress_r) = channel();
-        CommHandler {
-            threadpool: ThreadPool::new(basethreads),
-            free_threads: basethreads as isize,
-            data: start_data.clone(),
-            // jobs: Vec::new(),
-            jobs: start_data,
-            datacache: HashMap::new(),
-            gui_update_send: guichannels.0,
-            gui_cmd_recv: guichannels.1,
-            threadpool_progress_recv: progress_r,
-            threadpool_progress_send: progress_s,
-            threadpool_cmd_send: Vec::new(),
+        -> CommHandler {
+            let (progress_s, progress_r) = channel();
+            CommHandler {
+                threadpool: ThreadPool::new(basethreads),
+                data: start_data.clone(),
+                // jobs: Vec::new(),
+                jobs: start_data,
+                datacache: HashMap::new(),
+                gui_update_send: guichannels.0,
+                gui_cmd_recv: guichannels.1,
+                threadpool_progress_recv: progress_r,
+                threadpool_progress_send: progress_s,
+                threadpool_cmd_send: Vec::new(),
+            }
         }
-    }
 
     pub fn update(&mut self) {
         // handle gui cmd
@@ -65,7 +64,7 @@ impl CommHandler {
         }
 
         // start execution of any jobs that exist
-        if !self.jobs.is_empty() && self.free_threads > 0 {
+        if !self.jobs.is_empty() && (self.threadpool.max_count() - self.threadpool.active_count()) > 0 {
             // let job = self.jobs.pop().unwrap();
             let mut job = self.jobs.pop().unwrap();
             job.start_download();
@@ -88,7 +87,6 @@ impl CommHandler {
                     thread::sleep(Duration::from_millis(2));
                 }
             });
-            self.free_threads -= 1;
         }
     }
 
@@ -113,7 +111,6 @@ impl CommHandler {
                 // work on message handling
             }
         }
-        self.free_threads += 1;
     }
 
     fn broadcast(&self, msg: TpoolCmdMsg) -> Result<(), SendError<(String, Option<u64>)>> {

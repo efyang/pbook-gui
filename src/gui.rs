@@ -5,6 +5,7 @@ use gtk::{Orientation, Value};
 use std::env;
 use std::sync::mpsc::{Sender, Receiver};
 use std::collections::HashMap;
+use std::cell::RefCell;
 use glib::types::Type;
 use glib::translate::ToGlibPtr;
 use helper::*;
@@ -37,7 +38,7 @@ pub fn gui(data: &mut Vec<Category>,
         }
     };
     let current_working_dir = current_exe_path.parent()
-                                              .unwrap_or(Path::new(".."));
+        .unwrap_or(Path::new(".."));
     let default_config_path = current_working_dir.join(DEFAULT_GTK_CSS_CONFIG);
     let secondary_config_path = current_working_dir.join(SECONDARY_GTK_CSS_CONFIG);
 
@@ -58,8 +59,10 @@ pub fn gui(data: &mut Vec<Category>,
         category.begin_downloading_all();
     }
 
-    let downloads = data.to_downloads();
-    let mut infoitems = initial_liststore_model(&downloads);
+    unsafe {
+        DOWNLOADS = data.to_downloads();
+    }    
+    let infoitems = initial_liststore_model(&DOWNLOADS);
     // main rendering
     let button = gtk::Button::new_with_label("Click me!");
 
@@ -80,6 +83,11 @@ pub fn gui(data: &mut Vec<Category>,
     downloadview.set_model(Some(&download_store));
     downloadview.set_headers_visible(true);
 
+    // Setup TLS
+    GTK_GLOBAL.with(move |gtk_global| {
+        *gtk_global.borrow_mut() = Some((&mut DOWNLOADS, download_store, update_recv_channel));
+    });
+
     // add the scroll
     let download_scroll = gtk::ScrolledWindow::new(None, None);
     download_scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
@@ -95,7 +103,7 @@ pub fn gui(data: &mut Vec<Category>,
     let category_store = gtk::TreeStore::new(&category_column_types);
     category_store.add_categories(&data);
     categoryview.add_text_renderer_column("Categories", true, true, true, AddMode::PackStart, 0);
-    let toggle_cell = categoryview.add_toggle_renderer_column("Download?",
+    let toggle_cell = categoryview.add_toggle_renderer_column("Enabled?",
                                                               false,
                                                               false,
                                                               false,
@@ -117,7 +125,7 @@ pub fn gui(data: &mut Vec<Category>,
                     let category = category.to_owned();
                     for download in category.get_downloads().iter() {
                         if let Err(error) = update_download(command_send_channel.clone(),
-                                                            download.to_owned()) {
+                        download.to_owned()) {
                             println!("{}", error);
                         }
                     }
@@ -125,7 +133,7 @@ pub fn gui(data: &mut Vec<Category>,
                 2 => {
                     let download = category.get_download_at_idx(indices[1] as usize);
                     if let Err(error) = update_download(command_send_channel.clone(),
-                                                        download.to_owned()) {
+                    download.to_owned()) {
                         println!("{}", error);
                     }
                 }
@@ -133,8 +141,8 @@ pub fn gui(data: &mut Vec<Category>,
             }
             let iter = category_store.get_iter(&path).expect("Invalid TreePath");
             let current_value = category_store.get_value(&iter, 1)
-                                              .get::<bool>()
-                                              .expect("No Value");
+                .get::<bool>()
+                .expect("No Value");
             let new_value = Value::from(!current_value);
             category_store.set_value(&iter, 1, &new_value);
         });
@@ -167,6 +175,31 @@ pub fn gui(data: &mut Vec<Category>,
 
     window.show_all();
     gtk::main();
+}
+
+// static mut DOWNLOADS: Vec<Download> = vec!();
+
+lazy_static! {
+    static ref DOWNLOADS: Vec<Download> = Vec::new();
+}
+
+// Threadlocal storage of Gtk Stuff
+thread_local!(
+    // (main data, download store, message receiver)
+    static GTK_GLOBAL: RefCell<Option<(&'static mut Vec<Download>, gtk::ListStore, Receiver<Vec<Download>>)>> = RefCell::new(None)
+    );
+
+// update TLS
+pub fn update_local() -> Continue {
+    GTK_GLOBAL.with(|gtk_global| {
+        if let Some((ref mut main_data, ref download_store, ref rx)) = *gtk_global.borrow() {
+            if let Ok(update) = rx.try_recv() {
+                // placeholder
+                println!("Got update message");
+            }
+        }
+    });
+    Continue(false)
 }
 
 // result should be displayed in status bar if error
@@ -241,22 +274,22 @@ impl AddDownload for gtk::ListStore {
 
 // name, size, progress, speed, eta
 fn initial_liststore_model(data: &Vec<Download>)
-                           -> HashMap<u64, (String, String, f32, String, String)> {
-    let mut items = HashMap::new();
-    for dl in data.iter() {
-        match dl.get_dlinfo() {
-            &Some(ref dlinfo) => {
-                let dlid = dl.get_id();
-                // shorten needed until ellipsize is implemented for CellRendererText
-                let name = dl.get_name().to_string().shorten(50);
-                let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
-                let percent = dlinfo.get_percentage();
-                let speed = format!("{}/s", dlinfo.get_speed().convert_to_byte_units(0));
-                let eta = dlinfo.get_eta().to_string();
-                items.insert(dlid, (name, size, percent, speed, eta));
+    -> HashMap<u64, (String, String, f32, String, String)> {
+        let mut items = HashMap::new();
+        for dl in data.iter() {
+            match dl.get_dlinfo() {
+                &Some(ref dlinfo) => {
+                    let dlid = dl.get_id();
+                    // shorten needed until ellipsize is implemented for CellRendererText
+                    let name = dl.get_name().to_string().shorten(50);
+                    let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
+                    let percent = dlinfo.get_percentage();
+                    let speed = format!("{}/s", dlinfo.get_speed().convert_to_byte_units(0));
+                    let eta = dlinfo.get_eta().to_string();
+                    items.insert(dlid, (name, size, percent, speed, eta));
+                }
+                &None => {}
             }
-            &None => {}
         }
+        items
     }
-    items
-}
