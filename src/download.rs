@@ -6,6 +6,7 @@ use std::fs;
 use std::time::Duration;
 use std::env::current_exe;
 use hyper::client::Client;
+use hyper::client::response::Response;
 use data::*;
 
 pub const MILLI_TIMEMOUT: u64 = 500;
@@ -21,6 +22,7 @@ pub struct Downloader {
     progress_send: Sender<TpoolProgressMsg>,
     filepath: PathBuf,
     client: Client,
+    stream: Option<Response>,
     outfile: Option<File>,
 }
 
@@ -38,12 +40,17 @@ impl Downloader {
             progress_send: progress_send,
             filepath: path.to_path_buf(),
             client: Client::new(),
+            stream: None,
             outfile: None,
         }
     }
 
     pub fn update(&mut self) -> Result<(), String> {
-        unimplemented!();
+        //unimplemented!();
+        // check messages
+
+        // download more bytes
+        Ok(())
     }
 
     fn change_path(&mut self, newpath: &Path) {

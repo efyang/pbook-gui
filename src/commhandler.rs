@@ -7,8 +7,10 @@ use download::*;
 use std::time::Duration;
 use helper::Ignore;
 use gui::update_local;
+use time::precise_time_ns;
 
-const GUI_UPDATE_TIME: usize = 10;
+// in ns
+const GUI_UPDATE_TIME: u64 = 30;
 
 pub struct CommHandler {
     threadpool: ThreadPool,
@@ -24,27 +26,29 @@ pub struct CommHandler {
     threadpool_progress_recv: Receiver<TpoolProgressMsg>,
     threadpool_progress_send: Sender<TpoolProgressMsg>,
     threadpool_cmd_send: Vec<Sender<TpoolCmdMsg>>,
+    next_gui_update_t: u64,
 }
 
 impl CommHandler {
     pub fn new(basethreads: usize,
                start_data: Vec<Download>,
                guichannels: (Sender<Vec<Download>>, Receiver<(String, Option<u64>)>))
-        -> CommHandler {
-            let (progress_s, progress_r) = channel();
-            CommHandler {
-                threadpool: ThreadPool::new(basethreads),
-                data: start_data.clone(),
-                // jobs: Vec::new(),
-                jobs: start_data,
-                datacache: HashMap::new(),
-                gui_update_send: guichannels.0,
-                gui_cmd_recv: guichannels.1,
-                threadpool_progress_recv: progress_r,
-                threadpool_progress_send: progress_s,
-                threadpool_cmd_send: Vec::new(),
-            }
+               -> CommHandler {
+        let (progress_s, progress_r) = channel();
+        CommHandler {
+            threadpool: ThreadPool::new(basethreads),
+            data: start_data.clone(),
+            // jobs: Vec::new(),
+            jobs: start_data,
+            datacache: HashMap::new(),
+            gui_update_send: guichannels.0,
+            gui_cmd_recv: guichannels.1,
+            threadpool_progress_recv: progress_r,
+            threadpool_progress_send: progress_s,
+            threadpool_cmd_send: Vec::new(),
+            next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
         }
+    }
 
     pub fn update(&mut self) {
         // handle gui cmd
@@ -64,7 +68,8 @@ impl CommHandler {
         }
 
         // start execution of any jobs that exist
-        if !self.jobs.is_empty() && (self.threadpool.max_count() - self.threadpool.active_count()) > 0 {
+        if !self.jobs.is_empty() &&
+           (self.threadpool.max_count() - self.threadpool.active_count()) > 0 {
             // let job = self.jobs.pop().unwrap();
             let mut job = self.jobs.pop().unwrap();
             job.start_download();
@@ -84,7 +89,7 @@ impl CommHandler {
                         Err(e) => panic!(e),
                     }
 
-                    thread::sleep(Duration::from_millis(2));
+                    thread::sleep(Duration::from_millis(0));
                 }
             });
         }
@@ -121,6 +126,14 @@ impl CommHandler {
             }
         }
         Ok(())
+    }
+
+    fn update_gui(&self) {
+        if precise_time_ns() >= self.next_gui_update_t {
+            if let Err(e) = self.gui_update_send.send(self.data.to_owned()) {
+                println!("Failed to send gui update message: {}", e);
+            }
+        }
     }
 }
 
