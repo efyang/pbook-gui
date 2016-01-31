@@ -6,7 +6,7 @@ use threadpool::ThreadPool;
 use download::*;
 use std::time::Duration;
 use helper::Ignore;
-use gui::update_local;
+use gui::update_gui;
 use time::precise_time_ns;
 use constants::GUI_UPDATE_TIME;
 
@@ -91,6 +91,16 @@ impl CommHandler {
                 }
             });
         }
+
+        // update the gui
+        let current_time = precise_time_ns();
+        if current_time >= self.next_gui_update_t {
+            if let Err(e) = self.gui_update_send.send(self.data.to_owned()) {
+                println!("Failed to send gui update message: {}", e);
+            }
+            self.next_gui_update_t = current_time + GUI_UPDATE_TIME;
+            update_gui()
+        }
     }
 
     fn handle_gui_cmd(&mut self, cmd: GuiCmdMsg) {
@@ -124,16 +134,6 @@ impl CommHandler {
             }
         }
         Ok(())
-    }
-
-    fn update_gui(&mut self) {
-        let current_time = precise_time_ns();
-        if current_time >= self.next_gui_update_t {
-            if let Err(e) = self.gui_update_send.send(self.data.to_owned()) {
-                println!("Failed to send gui update message: {}", e);
-            }
-            self.next_gui_update_t = current_time + GUI_UPDATE_TIME;
-        }
     }
 }
 

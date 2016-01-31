@@ -1,5 +1,5 @@
 // gui update time for commhandler (ns)
-pub const GUI_UPDATE_TIME: u64 = 100;
+pub const GUI_UPDATE_TIME: u64 = 500000000;
 
 // theme setup constants
 #[cfg(windows)]
