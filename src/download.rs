@@ -8,8 +8,8 @@ use std::env::current_exe;
 use hyper::client::Client;
 use hyper::client::response::Response;
 use data::*;
+use constants::CONNECT_MILLI_TIMEMOUT;
 
-pub const MILLI_TIMEMOUT: u64 = 500;
 // NOTE
 // make a Downloader struct which would allow for storage of download path and buffer size
 // url, download path, buffer size
@@ -51,6 +51,12 @@ impl Downloader {
 
         // download more bytes
         Ok(())
+    }
+
+    fn send_message(&mut self, message: String) {
+        self.progress_send
+            .send((self.id, DownloadUpdate::Message(message)))
+            .expect("Failed to send message");
     }
 
     fn change_path(&mut self, newpath: &Path) {
@@ -98,12 +104,6 @@ impl Downloader {
             }
         }
     }
-
-    fn send_message(&mut self, message: String) {
-        self.progress_send
-            .send((self.id, DownloadUpdate::Message(message)))
-            .expect("Failed to send message");
-    }
 }
 
 fn make_chdir_error(errorstring: Error, kind: &str) -> String {
@@ -123,7 +123,7 @@ pub fn download_url(url: &str, fileout: &str) {
     fs::create_dir_all(dldir.clone()).unwrap();
     let filename = dldir.join(fileout);
     let mut client = Client::new();
-    client.set_read_timeout(Some(Duration::from_millis(MILLI_TIMEMOUT)));
+    client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
     let mut outfile = BufWriter::new(File::create(filename).unwrap());
     let mut stream = client.get(url).send().unwrap();
     let mut buf: [u8; 16] = [0; 16];

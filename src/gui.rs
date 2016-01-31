@@ -12,6 +12,7 @@ use glib::translate::ToGlibPtr;
 use helper::*;
 use cellrenderers::*;
 use theme::*;
+use constants::{DEFAULT_GTK_CSS_CONFIG, SECONDARY_GTK_CSS_CONFIG};
 
 // DownloadUpdate {
 // Message(String),

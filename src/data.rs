@@ -5,9 +5,7 @@ use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
 use time::precise_time_s;
 use helper::maximum;
-
-// seconds
-const DOWNLOAD_SPEED_UPDATE_TIME: f64 = 0.1;
+use constants::DOWNLOAD_SPEED_UPDATE_TIME;
 
 pub enum DownloadUpdate {
     Message(String),

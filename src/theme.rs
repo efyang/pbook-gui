@@ -6,17 +6,7 @@ use gdk::screen::Screen;
 use gtk::{CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContext};
 
 use gtkdef::*;
-
-#[cfg(windows)]
-pub const DEFAULT_GTK_CSS_CONFIG: &'static str = "..\\gtk.css";
-
-#[cfg(not(windows))]
-pub const DEFAULT_GTK_CSS_CONFIG: &'static str = "../gtk.css";
-
-pub const SECONDARY_GTK_CSS_CONFIG: &'static str = "gtk.css";
-
-const GTK_THEME_CFG: &'static str = "theme.txt";
-
+use constants::GTK_THEME_CFG;
 // Manually implemented with a trait until its implemented in the main branch
 pub fn setup_theme(current_working_dir: &Path,
                    default_config_path: PathBuf,

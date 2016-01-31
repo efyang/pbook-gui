@@ -27,6 +27,7 @@ mod helper;
 mod gtkdef;
 mod cellrenderers;
 mod theme;
+mod constants;
 
 use commhandler::*;
 use parse::*;

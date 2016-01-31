@@ -8,9 +8,7 @@ use std::time::Duration;
 use helper::Ignore;
 use gui::update_local;
 use time::precise_time_ns;
-
-// in ns
-const GUI_UPDATE_TIME: u64 = 30;
+use constants::GUI_UPDATE_TIME;
 
 pub struct CommHandler {
     threadpool: ThreadPool,
@@ -128,11 +126,13 @@ impl CommHandler {
         Ok(())
     }
 
-    fn update_gui(&self) {
-        if precise_time_ns() >= self.next_gui_update_t {
+    fn update_gui(&mut self) {
+        let current_time = precise_time_ns();
+        if current_time >= self.next_gui_update_t {
             if let Err(e) = self.gui_update_send.send(self.data.to_owned()) {
                 println!("Failed to send gui update message: {}", e);
             }
+            self.next_gui_update_t = current_time + GUI_UPDATE_TIME;
         }
     }
 }
