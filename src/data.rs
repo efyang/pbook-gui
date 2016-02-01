@@ -4,8 +4,10 @@ use std::time::Duration;
 use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
 use time::precise_time_s;
+use time;
 use helper::maximum;
 use constants::DOWNLOAD_SPEED_UPDATE_TIME;
+use std::i32;
 
 pub enum DownloadUpdate {
     Message(String),
@@ -52,8 +54,7 @@ impl Category {
     pub fn add_download(&mut self, download: Download) {
         self.downloads.push(download);
     }
-
-    pub fn set_enable_state_all(&mut self, enable_state: bool) {
+pub fn set_enable_state_all(&mut self, enable_state: bool) {
         for dl in self.downloads.iter_mut() {
             dl.set_enable_state(enable_state);
         }
@@ -262,9 +263,16 @@ impl DownloadInfo {
     }
 
     // to seconds
-    pub fn get_eta(&self) -> usize {
+    pub fn get_eta(&self) -> String {
         let bytes_left = self.total - self.progress;
         let speed = self.get_speed();
-        (bytes_left as f32 / speed) as usize
+        let eta = (bytes_left as f32 / speed) as usize;
+        let streta;
+        if maximum(eta, i32::MAX as usize) == eta {
+            streta = "∞".to_string();
+        } else {
+            streta = format!("{}", time::Duration::seconds(eta as i64));
+        }
+        streta
     }
 }

@@ -350,7 +350,7 @@ fn download_to_values(dl: &Download) -> Option<(u64, (String, String, f32, Strin
             let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
             let percent = dlinfo.get_percentage();
             let speed = format!("{}/s", dlinfo.get_speed().convert_to_byte_units(0));
-            let eta = dlinfo.get_eta().to_string();
+            let eta = dlinfo.get_eta();
             Some((dlid, (name, size, percent, speed, eta)))
         }
         &None => None,
