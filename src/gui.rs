@@ -57,10 +57,10 @@ pub fn gui(data: &mut Vec<Category>,
     window.set_default_size(1000, 500);
 
     // placeholder values
-    //for category in data.iter_mut() {
-        //category.set_enable_state_all(true);
-        //category.begin_downloading_all();
-    //}
+    // for category in data.iter_mut() {
+    // category.set_enable_state_all(true);
+    // category.begin_downloading_all();
+    // }
 
     *DOWNLOADS.lock().unwrap() = Vec::new();
     let initial_model = make_liststore_model(&*DOWNLOADS.lock().unwrap());
@@ -148,11 +148,13 @@ pub fn gui(data: &mut Vec<Category>,
                     }
                     is_category = false;
                 }
-                _ => {is_category = false;}
+                _ => {
+                    is_category = false;
+                }
             }
             let main_iter = category_store.get_iter(&path).expect("Invalid TreePath");
             toggle_bool_iter(&main_iter, &category_store);
-            
+
             // set all of a category
             if is_category {
                 if category_store.iter_has_child(&main_iter) {
@@ -231,10 +233,11 @@ fn update_local() -> Continue {
                         "remove" => {
                             // remove index
                             let idx = change.2.unwrap();
-                            let mut iter = download_store.iter_nth_child(None, idx as i32).expect("failed2");
+                            let mut iter = download_store.iter_nth_child(None, idx as i32)
+                                                         .expect("failed2");
                             download_store.remove(&mut iter);
                             DOWNLOADS.lock().unwrap().remove(idx);
-                        },
+                        }
                         "add" => {
                             let mut download = change.clone().3.unwrap();
                             download.start_download();
@@ -243,12 +246,14 @@ fn update_local() -> Continue {
                             let values = download_to_values(&download).unwrap().1;
                             download_store.add_download(values);
                             DOWNLOADS.lock().unwrap().push(download);
-                        },
+                        }
                         "set" => {
-                            let iter = download_store.iter_nth_child(None, change.2.unwrap() as i32).unwrap();
+                            let iter = download_store.iter_nth_child(None,
+                                                                     change.2.unwrap() as i32)
+                                                     .unwrap();
                             let values = download_to_values(&change.clone().3.unwrap()).unwrap().1;
                             download_store.set_download(&iter, values);
-                        },
+                        }
                         _ => {}
                     }
                 }
@@ -345,8 +350,7 @@ impl AddDownload for gtk::ListStore {
 }
 
 // name, size, progress, speed, eta
-fn make_liststore_model(data: &Vec<Download>)
-                           -> HashMap<u64, (String, String, f32, String, String)> {
+fn make_liststore_model(data: &Vec<Download>) -> HashMap<u64, (String, String, f32, String, String)> {
     let mut items = HashMap::new();
     for dl in data.iter() {
         match download_to_values(dl) {

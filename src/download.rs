@@ -46,7 +46,7 @@ impl Downloader {
     }
 
     pub fn update(&mut self) -> Result<(), String> {
-        //unimplemented!();
+        // unimplemented!();
         // check messages
 
         // download more bytes

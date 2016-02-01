@@ -15,6 +15,6 @@ int main(int numArgs, char* args[])
 
     std::string path = aux.substr(0, pos + 1);
     path += exe;
-    execl(path.c_str(), (char *) 0);
+    execl(path.c_str(), (char*)0);
     return 0;
 }

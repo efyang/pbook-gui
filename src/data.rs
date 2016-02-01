@@ -54,7 +54,7 @@ impl Category {
     pub fn add_download(&mut self, download: Download) {
         self.downloads.push(download);
     }
-pub fn set_enable_state_all(&mut self, enable_state: bool) {
+    pub fn set_enable_state_all(&mut self, enable_state: bool) {
         for dl in self.downloads.iter_mut() {
             dl.set_enable_state(enable_state);
         }
@@ -168,7 +168,7 @@ impl Download {
     pub fn start_download(&mut self) {
         self.dlinfo = Some(DownloadInfo::new());
     }
-    
+
     pub fn stop_download(&mut self) {
         self.dlinfo = None;
     }

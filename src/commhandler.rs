@@ -49,7 +49,7 @@ impl CommHandler {
             id_data: id_data_hm,
             liststore_ids: Vec::new(),
             jobs: Vec::new(),
-            //jobs: start_data,
+            // jobs: start_data,
             datacache: HashMap::new(),
             pending_changes: Vec::new(),
             gui_update_send: guichannels.0,
