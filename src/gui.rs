@@ -128,6 +128,7 @@ pub fn gui(data: &mut Vec<Category>,
             let indices = path.get_indices();
             let ref category = data[indices[0] as usize];
             // Update data and the view
+            let is_category;
             match path.get_depth() {
                 1 => {
                     let category = category.to_owned();
@@ -137,6 +138,7 @@ pub fn gui(data: &mut Vec<Category>,
                             println!("{}", error);
                         }
                     }
+                    is_category = true;
                 }
                 2 => {
                     let download = category.get_download_at_idx(indices[1] as usize);
@@ -144,16 +146,24 @@ pub fn gui(data: &mut Vec<Category>,
                                                         download.to_owned()) {
                         println!("{}", error);
                     }
+                    is_category = false;
                 }
-                _ => {}
+                _ => {is_category = false;}
             }
-            let iter = category_store.get_iter(&path).expect("Invalid TreePath");
-            let current_value = category_store.get_value(&iter, 1)
-                                              .get::<bool>()
-                                              .expect("No Value");
-            let new_value = (!current_value).to_value();
-            category_store.set_value(&iter, 1, &new_value);
-            // make this set all of a category somehow
+            let main_iter = category_store.get_iter(&path).expect("Invalid TreePath");
+            toggle_bool_iter(&main_iter, &category_store);
+            
+            // set all of a category
+            if is_category {
+                if category_store.iter_has_child(&main_iter) {
+                    let mut child_iter = category_store.iter_children(Some(&main_iter)).unwrap();
+                    let max_child = category_store.iter_n_children(Some(&main_iter));
+                    for _ in 0..max_child {
+                        toggle_bool_iter(&child_iter, &category_store);
+                        category_store.iter_next(&mut child_iter);
+                    }
+                }
+            }
         });
     }
 
@@ -184,6 +194,14 @@ pub fn gui(data: &mut Vec<Category>,
 
     window.show_all();
     gtk::main();
+}
+
+fn toggle_bool_iter(iter: &gtk::TreeIter, category_store: &gtk::TreeStore) {
+    let current_value = category_store.get_value(iter, 1)
+                                      .get::<bool>()
+                                      .expect("No Value");
+    let new_value = (!current_value).to_value();
+    category_store.set_value(iter, 1, &new_value);
 }
 
 lazy_static! {
