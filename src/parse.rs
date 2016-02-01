@@ -29,8 +29,11 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
         } else {
             match get_item_info(entry) {
                 Some(data) => {
-                    let dl = Download::new(&data.0, &data.1);
-                    category.add_download(dl);
+                    // data.1 is url
+                    if data.1.to_ascii_lowercase().contains("pdf") {
+                        let dl = Download::new(&data.0, &data.1);
+                        category.add_download(dl);
+                    }
                 }
                 None => {}
             }
@@ -40,7 +43,7 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
     // remove all unnecessary categories
     categories = categories.iter()
                            .filter(|c| {
-                               !c.get_name().to_ascii_lowercase().contains("index") ||
+                               !c.get_name().to_ascii_lowercase().contains("index") &&
                                c.get_downloads().len() != 0
                            })
                            .map(|c| c.clone())
