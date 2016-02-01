@@ -15,6 +15,7 @@ pub enum DownloadUpdate {
 pub type TpoolProgressMsg = (u64, DownloadUpdate);
 pub type GuiCmdMsg = (String, Option<u64>);
 pub type TpoolCmdMsg = GuiCmdMsg;
+pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
 
 pub trait ToDownloads {
     fn to_downloads(&self) -> Vec<Download>;
@@ -165,6 +166,10 @@ impl Download {
 
     pub fn start_download(&mut self) {
         self.dlinfo = Some(DownloadInfo::new());
+    }
+    
+    pub fn stop_download(&mut self) {
+        self.dlinfo = None;
     }
 
     pub fn get_name(&self) -> &str {

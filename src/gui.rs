@@ -25,7 +25,7 @@ use constants::{DEFAULT_GTK_CSS_CONFIG, SECONDARY_GTK_CSS_CONFIG};
 // TpoolCmdMsg = GuiCmdMsg;
 
 pub fn gui(data: &mut Vec<Category>,
-           update_recv_channel: Receiver<Vec<Download>>,
+           update_recv_channel: Receiver<GuiUpdateMsg>,
            command_send_channel: Sender<(String, Option<u64>)>) {
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
@@ -57,13 +57,20 @@ pub fn gui(data: &mut Vec<Category>,
     window.set_default_size(1000, 500);
 
     // placeholder values
-    for category in data.iter_mut() {
-        category.set_enable_state_all(true);
-        category.begin_downloading_all();
-    }
+    //for category in data.iter_mut() {
+        //category.set_enable_state_all(true);
+        //category.begin_downloading_all();
+    //}
 
-    *DOWNLOADS.lock().unwrap() = data.to_downloads();
-    *CURRENT_DOWNLOADS.lock().unwrap() = initial_liststore_model(&*DOWNLOADS.lock().unwrap());
+    *DOWNLOADS.lock().unwrap() = Vec::new();
+    let initial_model = make_liststore_model(&*DOWNLOADS.lock().unwrap());
+    *ID_DOWNLOAD_HM.lock().unwrap() = {
+        let mut id_download_hm = HashMap::new();
+        for download in DOWNLOADS.lock().unwrap().iter() {
+            id_download_hm.insert(download.get_id(), download.clone());
+        }
+        id_download_hm
+    };
     // main rendering
     let button = gtk::Button::new_with_label("Click me!");
 
@@ -77,7 +84,7 @@ pub fn gui(data: &mut Vec<Category>,
     downloadview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart, 3);
     downloadview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, 4);
 
-    for item in CURRENT_DOWNLOADS.lock().unwrap().clone() {
+    for item in initial_model {
         download_store.add_download(item.1);
     }
 
@@ -146,6 +153,7 @@ pub fn gui(data: &mut Vec<Category>,
                                               .expect("No Value");
             let new_value = (!current_value).to_value();
             category_store.set_value(&iter, 1, &new_value);
+            // make this set all of a category somehow
         });
     }
 
@@ -180,23 +188,52 @@ pub fn gui(data: &mut Vec<Category>,
 
 lazy_static! {
     static ref DOWNLOADS: Mutex<Vec<Download>> = Mutex::new(Vec::new());
-    static ref CURRENT_DOWNLOADS: Mutex<HashMap<u64, (String, String, f32, String, String)>> = Mutex::new(HashMap::new());
+    static ref ID_DOWNLOAD_HM: Mutex<HashMap<u64, Download>> = Mutex::new(HashMap::new());
 }
 
 // Threadlocal storage of Gtk Stuff
 thread_local!(
     // (main data, download store, message receiver)
-    static GTK_GLOBAL: RefCell<Option<(gtk::ListStore, Receiver<Vec<Download>>)>> = RefCell::new(None)
+    static GTK_GLOBAL: RefCell<Option<(gtk::ListStore, Receiver<GuiUpdateMsg>)>> = RefCell::new(None)
 );
 
 // update TLS
 fn update_local() -> Continue {
     GTK_GLOBAL.with(|gtk_global| {
         if let Some((ref download_store, ref rx)) = *gtk_global.borrow() {
-            if let Ok(update) = rx.try_recv() {
-                let downloads = DOWNLOADS.lock().unwrap();
-                let current_downloads = CURRENT_DOWNLOADS.lock().unwrap();
-                // placeholder
+            if let Ok(changes) = rx.try_recv() {
+                // clear and repopulate takes far too long
+                // for every change made in commhandler, append to change list
+                // send that change list
+                // go through change list and update accordingly
+                // command, optional id, optional index, optional new value
+                // [string, u64, usize, Download]
+                for change in changes.iter() {
+                    match &change.0 as &str {
+                        "remove" => {
+                            // remove index
+                            let idx = change.2.unwrap();
+                            let mut iter = download_store.iter_nth_child(None, idx as i32).expect("failed2");
+                            download_store.remove(&mut iter);
+                            DOWNLOADS.lock().unwrap().remove(idx);
+                        },
+                        "add" => {
+                            let mut download = change.clone().3.unwrap();
+                            download.start_download();
+                            download.set_enable_state(true);
+                            // add download
+                            let values = download_to_values(&download).unwrap().1;
+                            download_store.add_download(values);
+                            DOWNLOADS.lock().unwrap().push(download);
+                        },
+                        "set" => {
+                            let iter = download_store.iter_nth_child(None, change.2.unwrap() as i32).unwrap();
+                            let values = download_to_values(&change.clone().3.unwrap()).unwrap().1;
+                            download_store.set_download(&iter, values);
+                        },
+                        _ => {}
+                    }
+                }
             }
         }
     });
@@ -213,12 +250,18 @@ pub fn update_gui() {
 fn update_download(sender: Sender<GuiCmdMsg>, download: Download) -> Result<(), String> {
     let id = download.get_id();
     let message;
-    if download.is_enabled() {
-        message = "remove";
-    } else {
-        message = "add";
+    for dl in DOWNLOADS.lock().unwrap().iter() {
+        if dl.get_id() == id {
+            if dl.is_enabled() {
+                message = "remove";
+            } else {
+                message = "add";
+            }
+            return sender.send_gui_cmd(message.to_owned(), Some(id));
+        }
     }
-    sender.send_gui_cmd(message.to_owned(), Some(id))
+    // not found in current list
+    return sender.send_gui_cmd("add".to_owned(), Some(id));
 }
 
 trait CmdSend {
@@ -266,11 +309,15 @@ impl AddCategories for gtk::TreeStore {
 
 trait AddDownload {
     fn add_download(&self, download: (String, String, f32, String, String));
+    fn set_download(&self, iter: &gtk::TreeIter, download: (String, String, f32, String, String));
 }
 
 impl AddDownload for gtk::ListStore {
     fn add_download(&self, download: (String, String, f32, String, String)) {
         let iter = self.append();
+        self.set_download(&iter, download);
+    }
+    fn set_download(&self, iter: &gtk::TreeIter, download: (String, String, f32, String, String)) {
         self.set_value(&iter, 0, &download.0.to_value());
         self.set_value(&iter, 1, &download.1.to_value());
         self.set_value(&iter, 2, &download.2.to_value());
@@ -280,7 +327,7 @@ impl AddDownload for gtk::ListStore {
 }
 
 // name, size, progress, speed, eta
-fn initial_liststore_model(data: &Vec<Download>)
+fn make_liststore_model(data: &Vec<Download>)
                            -> HashMap<u64, (String, String, f32, String, String)> {
     let mut items = HashMap::new();
     for dl in data.iter() {
