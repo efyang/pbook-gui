@@ -179,7 +179,10 @@ impl CommHandler {
                 self.broadcast(cmd).ignore();
                 // change to unwrap later on
             }
-            "stop" => self.broadcast(cmd).ignore(),
+            "stop" => {
+                self.broadcast(cmd).ignore();
+                drop(self)
+            }
             _ => {}
         }
     }
