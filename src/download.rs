@@ -45,10 +45,33 @@ impl Downloader {
         }
     }
 
+    pub fn begin(&mut self) -> Result<(), String> {
+        let cont = true;
+        match self.stream {
+            Some(_) => {
+                
+            }, 
+            None => {
+
+            }
+        }
+        Ok(())
+    }
+
     pub fn update(&mut self) -> Result<(), String> {
         // unimplemented!();
         // check messages
-
+        match self.cmd_recv.try_recv() {
+            Ok(cmd) => {
+                match &cmd.0 as &str {
+                    "stop" => {
+                        drop(self);
+                    },
+                    _ => {}
+                }
+            }
+            Err(_) => {}
+        }
         // download more bytes
         Ok(())
     }

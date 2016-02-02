@@ -75,7 +75,7 @@ impl CommHandler {
             Ok(dl_progress) => {
                 self.handle_progress_msg(dl_progress);
             }
-            Err(e) => {}
+            Err(_) => {}
         }
 
         // start execution of any jobs that exist
