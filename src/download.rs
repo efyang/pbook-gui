@@ -47,14 +47,28 @@ impl Downloader {
 
     pub fn begin(&mut self) -> Result<(), String> {
         let cont = true;
-        match self.stream {
-            Some(_) => {
-                
-            }, 
-            None => {
-
+        if let None = self.stream {
+            match self.client.get(&self.url).send() {
+                Ok(s) => {
+                    self.stream = Some(s);
+                },
+                Err(e) => {
+                    return Err(format!("{}", e));
+                }
             }
         }
+        
+        if let None = self.outfile {
+            match File::open(&self.filepath) {
+                Ok(f) => {
+                    self.outfile = Some(f);
+                },
+                Err(e) => {
+                    return Err(format!("{}", e));
+                }
+            }
+        }
+
         Ok(())
     }
 

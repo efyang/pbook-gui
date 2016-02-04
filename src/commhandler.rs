@@ -91,7 +91,11 @@ impl CommHandler {
                                                  progress_sender,
                                                  Path::new("./testing"));
             self.threadpool.execute(move || {
-                for _ in 0..1000000 {
+                loop {
+                    match downloader.begin() {
+                        Ok(_) => {},
+                        Err(e) => panic!(e),
+                    }
                     // progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();
                     // need sleep or there will be a memory overflow -> read more than one byte?
                     match downloader.update() {

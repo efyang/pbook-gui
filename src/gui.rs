@@ -254,6 +254,15 @@ fn update_local() -> Continue {
                             let values = download_to_values(&change.clone().3.unwrap()).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
+                        "panicked" => {
+                            if let Some(id) = change.1 {
+                                // download specific fail 
+                            } else {
+                                // commhandler fail
+                                gtk::main_quit();
+                                panic!("Communication handler panicked");
+                            }
+                        }
                         _ => {}
                     }
                 }
