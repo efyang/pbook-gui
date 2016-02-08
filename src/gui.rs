@@ -26,7 +26,7 @@ use constants::{DEFAULT_GTK_CSS_CONFIG, SECONDARY_GTK_CSS_CONFIG};
 
 pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<GuiUpdateMsg>,
-           command_send_channel: Sender<(String, Option<u64>)>) {
+           command_send_channel: Sender<GuiCmdMsg>) {
     if gtk::init().is_err() {
         println!("Failed to initialize GTK.");
         return;
@@ -256,7 +256,7 @@ fn update_local() -> Continue {
                         }
                         "panicked" => {
                             if let Some(id) = change.1 {
-                                // download specific fail 
+                                // download specific fail
                             } else {
                                 // commhandler fail
                                 gtk::main_quit();
@@ -279,7 +279,10 @@ pub fn update_gui() {
 }
 
 // result should be displayed in status bar if error
-fn update_download(sender: Sender<GuiCmdMsg>, download: Download) -> Result<(), String> {
+fn update_download(sender: Sender<GuiCmdMsg>,
+                   download: Download,
+                   outPath: PathBuf)
+                   -> Result<(), String> {
     let id = download.get_id();
     let message;
     for dl in DOWNLOADS.lock().unwrap().iter() {
@@ -289,7 +292,7 @@ fn update_download(sender: Sender<GuiCmdMsg>, download: Download) -> Result<(), 
             } else {
                 message = "add";
             }
-            return sender.send_gui_cmd(message.to_owned(), Some(id));
+            return sender.send_gui_cmd(message.to_owned(), Some(id), Some(outPath));
         }
     }
     // not found in current list
@@ -297,12 +300,20 @@ fn update_download(sender: Sender<GuiCmdMsg>, download: Download) -> Result<(), 
 }
 
 trait CmdSend {
-    fn send_gui_cmd(&self, cmd: String, id: Option<u64>) -> Result<(), String>;
+    fn send_gui_cmd(&self,
+                    cmd: String,
+                    id: Option<u64>,
+                    path: Option<PathBuf>)
+                    -> Result<(), String>;
 }
 
 impl CmdSend for Sender<GuiCmdMsg> {
-    fn send_gui_cmd(&self, cmd: String, id: Option<u64>) -> Result<(), String> {
-        match self.send((cmd, id)) {
+    fn send_gui_cmd(&self,
+                    cmd: String,
+                    id: Option<u64>,
+                    path: Option<PathBuf>)
+                    -> Result<(), String> {
+        match self.send((cmd, id, path)) {
             Ok(_) => Ok(()),
             Err(e) => Err(format!("{}", e)),
         }

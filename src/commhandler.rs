@@ -36,7 +36,7 @@ pub struct CommHandler {
 impl CommHandler {
     pub fn new(basethreads: usize,
                start_data: Vec<Download>,
-               guichannels: (Sender<GuiUpdateMsg>, Receiver<(String, Option<u64>)>))
+               guichannels: (Sender<GuiUpdateMsg>, Receiver<GuiCmdMsg>))
                -> CommHandler {
         let (progress_s, progress_r) = channel();
         let mut id_data_hm = HashMap::new();
@@ -93,7 +93,7 @@ impl CommHandler {
             self.threadpool.execute(move || {
                 loop {
                     match downloader.begin() {
-                        Ok(_) => {},
+                        Ok(_) => {}
                         Err(e) => panic!(e),
                     }
                     // progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();
@@ -172,6 +172,7 @@ impl CommHandler {
                     }
                 }
 
+                // add to pending changes
                 for idx in 0..self.liststore_ids.len() {
                     if self.liststore_ids[idx] == id {
                         self.liststore_ids.remove(idx);
@@ -200,20 +201,21 @@ impl CommHandler {
             }
             DownloadUpdate::Message(message) => {
                 // work on message handling
-                match message as &str {
+                match &message as &str {
                     "finished" => {
                         // remove from datacache
                         // already finished so no need to have cache anymore
-                        self.datacache.remove(dlid);
+                        self.datacache.remove(&dlid);
                         // send message to gui
-                    },
+                        self.pending_changes.push((message, Some(dlid), None, None));
+                    }
                     _ => {}
                 }
             }
         }
     }
 
-    fn broadcast(&self, msg: TpoolCmdMsg) -> Result<(), SendError<(String, Option<u64>)>> {
+    fn broadcast(&self, msg: TpoolCmdMsg) -> Result<(), SendError<GuiCmdMsg>> {
         for channel in self.threadpool_cmd_send.iter() {
             let sendresult = channel.send(msg.clone());
             if sendresult.is_err() {

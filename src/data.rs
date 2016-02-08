@@ -15,7 +15,7 @@ pub enum DownloadUpdate {
 }
 
 pub type TpoolProgressMsg = (u64, DownloadUpdate);
-pub type GuiCmdMsg = (String, Option<u64>);
+pub type GuiCmdMsg = (String, Option<u64>, Option<PathBuf>);
 pub type TpoolCmdMsg = GuiCmdMsg;
 pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
 
