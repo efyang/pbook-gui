@@ -200,6 +200,15 @@ impl CommHandler {
             }
             DownloadUpdate::Message(message) => {
                 // work on message handling
+                match message as &str {
+                    "finished" => {
+                        // remove from datacache
+                        // already finished so no need to have cache anymore
+                        self.datacache.remove(dlid);
+                        // send message to gui
+                    },
+                    _ => {}
+                }
             }
         }
     }
