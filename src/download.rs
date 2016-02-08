@@ -23,7 +23,8 @@ pub struct Downloader {
     filepath: PathBuf,
     client: Client,
     stream: Option<Response>,
-    outfile: Option<File>,
+    outfile: Option<BufWriter<File>>,
+    buffer: [u8; 16],
 }
 
 impl Downloader {
@@ -39,30 +40,34 @@ impl Downloader {
             cmd_recv: cmd_recv,
             progress_send: progress_send,
             filepath: path.to_path_buf(),
-            client: Client::new(),
+            client: {
+                let mut client = Client::new();
+                client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
+                client
+            },
             stream: None,
             outfile: None,
+            buffer: [0; 16],
         }
     }
 
     pub fn begin(&mut self) -> Result<(), String> {
-        let cont = true;
         if let None = self.stream {
             match self.client.get(&self.url).send() {
                 Ok(s) => {
                     self.stream = Some(s);
-                },
+                }
                 Err(e) => {
                     return Err(format!("{}", e));
                 }
             }
         }
-        
+
         if let None = self.outfile {
             match File::open(&self.filepath) {
                 Ok(f) => {
-                    self.outfile = Some(f);
-                },
+                    self.outfile = Some(BufWriter::new(f));
+                }
                 Err(e) => {
                     return Err(format!("{}", e));
                 }
@@ -73,24 +78,57 @@ impl Downloader {
     }
 
     pub fn update(&mut self) -> Result<(), String> {
-        // unimplemented!();
         // check messages
         match self.cmd_recv.try_recv() {
             Ok(cmd) => {
                 match &cmd.0 as &str {
                     "stop" => {
                         drop(self);
-                    },
+                        // kill thread
+                        return Err("Thread stopped".to_string());
+                    }
                     _ => {}
                 }
             }
             Err(_) => {}
         }
         // download more bytes
+        let mut finished = false;
+        if let Some(ref mut outfile) = self.outfile {
+            if let Some(ref mut stream) = self.stream {
+                match stream.read(&mut self.buffer) {
+                    Ok(0) => {
+                        // Finished downloading
+                        outfile.flush().expect("Failed to flush to outfile");
+                        self.progress_send
+                            .send((self.id, DownloadUpdate::Message("finished".to_owned())))
+                            .expect("Failed to send message");
+                        finished = true;
+                    }
+                    Ok(n) => {
+                        // got n bytes
+                        outfile.write(&self.buffer[..n]).expect("IO write error");
+                        self.progress_send
+                            .send((self.id, DownloadUpdate::Amount(n)))
+                            .expect("Failed to send message");
+                    }
+                    Err(e) => {
+                        // Some error
+                        panic!(e);
+                    }
+                }
+            }
+        }
+
+        if finished {
+            drop(self);
+            panic!();
+        }
+
         Ok(())
     }
 
-    fn send_message(&mut self, message: String) {
+    fn send_message(&self, message: String) {
         self.progress_send
             .send((self.id, DownloadUpdate::Message(message)))
             .expect("Failed to send message");
@@ -128,7 +166,7 @@ impl Downloader {
                 // make the file
                 match File::create(newpath) {
                     Ok(f) => {
-                        self.outfile = Some(f);
+                        self.outfile = Some(BufWriter::new(f));
                     }
                     Err(e) => {
                         let error_msg = make_chdir_error(e, "fileopen");
