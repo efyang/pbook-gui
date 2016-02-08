@@ -41,7 +41,7 @@ pub fn gui(data: &mut Vec<Category>,
         }
     };
     let current_working_dir = current_exe_path.parent()
-                                              .unwrap_or(Path::new(".."));
+        .unwrap_or(Path::new(".."));
     let default_config_path = current_working_dir.join(DEFAULT_GTK_CSS_CONFIG);
     let secondary_config_path = current_working_dir.join(SECONDARY_GTK_CSS_CONFIG);
 
@@ -133,8 +133,8 @@ pub fn gui(data: &mut Vec<Category>,
                 1 => {
                     let category = category.to_owned();
                     for download in category.get_downloads().iter() {
-                        if let Err(error) = update_download(command_send_channel.clone(),
-                                                            download.to_owned()) {
+                        // NOTE: PLACEHOLDER PATHS
+                        if let Err(error) = update_download(command_send_channel.clone(), download.to_owned(), Path::new("/home/honorabrutroll/test").to_path_buf()) {
                             println!("{}", error);
                         }
                     }
@@ -142,8 +142,7 @@ pub fn gui(data: &mut Vec<Category>,
                 }
                 2 => {
                     let download = category.get_download_at_idx(indices[1] as usize);
-                    if let Err(error) = update_download(command_send_channel.clone(),
-                                                        download.to_owned()) {
+                    if let Err(error) = update_download(command_send_channel.clone(), download.to_owned(), Path::new("/home/honorabrutroll/test").to_path_buf()) {
                         println!("{}", error);
                     }
                     is_category = false;
@@ -185,7 +184,7 @@ pub fn gui(data: &mut Vec<Category>,
     {
         let command_send_channel = command_send_channel.clone();
         window.connect_delete_event(move |_, _| {
-            match command_send_channel.clone().send_gui_cmd("stop".to_owned(), None) {
+            match command_send_channel.clone().send_gui_cmd("stop".to_owned(), None, None) {
                 Ok(_) => {}
                 Err(e) => println!("{:?}", e),
             }
@@ -200,8 +199,8 @@ pub fn gui(data: &mut Vec<Category>,
 
 fn toggle_bool_iter(iter: &gtk::TreeIter, category_store: &gtk::TreeStore) {
     let current_value = category_store.get_value(iter, 1)
-                                      .get::<bool>()
-                                      .expect("No Value");
+        .get::<bool>()
+        .expect("No Value");
     let new_value = (!current_value).to_value();
     category_store.set_value(iter, 1, &new_value);
 }
@@ -215,7 +214,7 @@ lazy_static! {
 thread_local!(
     // (main data, download store, message receiver)
     static GTK_GLOBAL: RefCell<Option<(gtk::ListStore, Receiver<GuiUpdateMsg>)>> = RefCell::new(None)
-);
+    );
 
 // update TLS
 fn update_local() -> Continue {
@@ -234,7 +233,7 @@ fn update_local() -> Continue {
                             // remove index
                             let idx = change.2.unwrap();
                             let mut iter = download_store.iter_nth_child(None, idx as i32)
-                                                         .expect("failed2");
+                                .expect("failed2");
                             download_store.remove(&mut iter);
                             DOWNLOADS.lock().unwrap().remove(idx);
                         }
@@ -250,7 +249,7 @@ fn update_local() -> Continue {
                         "set" => {
                             let iter = download_store.iter_nth_child(None,
                                                                      change.2.unwrap() as i32)
-                                                     .unwrap();
+                                .unwrap();
                             let values = download_to_values(&change.clone().3.unwrap()).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
@@ -282,29 +281,29 @@ pub fn update_gui() {
 fn update_download(sender: Sender<GuiCmdMsg>,
                    download: Download,
                    outPath: PathBuf)
-                   -> Result<(), String> {
-    let id = download.get_id();
-    let message;
-    for dl in DOWNLOADS.lock().unwrap().iter() {
-        if dl.get_id() == id {
-            if dl.is_enabled() {
-                message = "remove";
-            } else {
-                message = "add";
+    -> Result<(), String> {
+        let id = download.get_id();
+        let message;
+        for dl in DOWNLOADS.lock().unwrap().iter() {
+            if dl.get_id() == id {
+                if dl.is_enabled() {
+                    message = "remove";
+                } else {
+                    message = "add";
+                }
+                return sender.send_gui_cmd(message.to_owned(), Some(id), Some(outPath));
             }
-            return sender.send_gui_cmd(message.to_owned(), Some(id), Some(outPath));
         }
+        // not found in current list
+        return sender.send_gui_cmd("add".to_owned(), Some(id), Some(outPath));
     }
-    // not found in current list
-    return sender.send_gui_cmd("add".to_owned(), Some(id));
-}
 
 trait CmdSend {
     fn send_gui_cmd(&self,
                     cmd: String,
                     id: Option<u64>,
                     path: Option<PathBuf>)
-                    -> Result<(), String>;
+        -> Result<(), String>;
 }
 
 impl CmdSend for Sender<GuiCmdMsg> {
@@ -312,12 +311,12 @@ impl CmdSend for Sender<GuiCmdMsg> {
                     cmd: String,
                     id: Option<u64>,
                     path: Option<PathBuf>)
-                    -> Result<(), String> {
-        match self.send((cmd, id, path)) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!("{}", e)),
+        -> Result<(), String> {
+            match self.send((cmd, id, path)) {
+                Ok(_) => Ok(()),
+                Err(e) => Err(format!("{}", e)),
+            }
         }
-    }
 }
 
 trait AddCategories {

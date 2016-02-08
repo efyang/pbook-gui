@@ -69,6 +69,7 @@ impl Downloader {
                     self.outfile = Some(BufWriter::new(f));
                 }
                 Err(e) => {
+                    println!("fopen error");
                     return Err(format!("{}", e));
                 }
             }
