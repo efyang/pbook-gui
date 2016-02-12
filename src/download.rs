@@ -15,9 +15,10 @@ use constants::CONNECT_MILLI_TIMEMOUT;
 // url, download path, buffer size
 
 pub struct Downloader {
+    name: String,
     url: String,
     id: u64,
-    download_path: PathBuf,
+    //download_path: PathBuf,
     cmd_recv: Receiver<TpoolCmdMsg>,
     progress_send: Sender<TpoolProgressMsg>,
     filepath: PathBuf,
@@ -30,16 +31,18 @@ pub struct Downloader {
 impl Downloader {
     pub fn new(download: Download,
                cmd_recv: Receiver<TpoolCmdMsg>,
-               progress_send: Sender<TpoolProgressMsg>,
-               path: &Path)
+               progress_send: Sender<TpoolProgressMsg>)
                -> Downloader {
+        let dlname = download.get_name().to_string();
+        //println!("{:?}", download.get_path().to_owned().join(spaces_to_underscores(&dlname)));
         Downloader {
+            name: dlname.clone(),
             url: download.get_url().to_string(),
             id: download.get_id(),
-            download_path: download.get_path().to_owned(),
+            //download_path: path.to_owned().join(spaces_to_underscores(&dlname)),
             cmd_recv: cmd_recv,
             progress_send: progress_send,
-            filepath: path.to_path_buf(),
+            filepath: download.get_path().to_owned().join(spaces_to_underscores(&dlname)),
             client: {
                 let mut client = Client::new();
                 client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
@@ -58,13 +61,14 @@ impl Downloader {
                     self.stream = Some(s);
                 }
                 Err(e) => {
+                    println!("geterror");
                     return Err(format!("{}", e));
                 }
             }
         }
 
         if let None = self.outfile {
-            match File::open(&self.filepath) {
+            match File::create(&self.filepath) {
                 Ok(f) => {
                     self.outfile = Some(BufWriter::new(f));
                 }
@@ -136,7 +140,7 @@ impl Downloader {
     }
 
     fn change_path(&mut self, newpath: &Path) {
-        if newpath != self.download_path {
+        if newpath != self.filepath {
             // preexisting outfile
             if let Some(ref mut outfile) = self.outfile {
                 // flush outfile
@@ -217,4 +221,8 @@ pub fn download_url(url: &str, fileout: &str) {
 
 pub fn get_url_filename(url: &str) -> Option<&str> {
     url.split('/').last()
+}
+
+fn spaces_to_underscores(s: &str) -> String {
+    s.replace(" ", "_")
 }

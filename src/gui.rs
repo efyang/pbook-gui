@@ -7,6 +7,7 @@ use std::sync::mpsc::{Sender, Receiver};
 use std::sync::Mutex;
 use std::collections::HashMap;
 use std::cell::RefCell;
+use std::fs;
 use glib;
 use glib::types::Type;
 use glib::translate::ToGlibPtr;
@@ -118,7 +119,13 @@ pub fn gui(data: &mut Vec<Category>,
                                                               AddMode::PackEnd,
                                                               1);
     categoryview.set_model(Some(&category_store));
+    // make default download directory
 
+    let mut download_dir = current_working_dir.join("downloads");
+
+    if !download_dir.is_dir() {
+        fs::create_dir(download_dir.clone()).expect("Failed to create default download directory");
+    }
     // on toggle
     {
         let data = data.to_owned();
@@ -134,7 +141,7 @@ pub fn gui(data: &mut Vec<Category>,
                     let category = category.to_owned();
                     for download in category.get_downloads().iter() {
                         // NOTE: PLACEHOLDER PATHS
-                        if let Err(error) = update_download(command_send_channel.clone(), download.to_owned(), Path::new("/home/honorabrutroll/test").to_path_buf()) {
+                        if let Err(error) = update_download(command_send_channel.clone(), download.to_owned(), download_dir.to_path_buf()) {
                             println!("{}", error);
                         }
                     }
@@ -142,7 +149,7 @@ pub fn gui(data: &mut Vec<Category>,
                 }
                 2 => {
                     let download = category.get_download_at_idx(indices[1] as usize);
-                    if let Err(error) = update_download(command_send_channel.clone(), download.to_owned(), Path::new("/home/honorabrutroll/test").to_path_buf()) {
+                    if let Err(error) = update_download(command_send_channel.clone(), download.to_owned(), download_dir.to_path_buf()) {
                         println!("{}", error);
                     }
                     is_category = false;

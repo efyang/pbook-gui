@@ -79,15 +79,15 @@ impl Category {
     pub fn increment_download_progress(&mut self,
                                        download_id: &u64,
                                        increment: usize)
-                                       -> Result<(), String> {
-        for dl in self.downloads.iter_mut() {
-            if &dl.id == download_id {
-                return dl.increment_progress(increment);
+        -> Result<(), String> {
+            for dl in self.downloads.iter_mut() {
+                if &dl.id == download_id {
+                    return dl.increment_progress(increment);
+                }
             }
+            // default if not found
+            Err(format!("No such download id {} exists.", download_id))
         }
-        // default if not found
-        Err(format!("No such download id {} exists.", download_id))
-    }
 
     pub fn get_downloads(&self) -> &[Download] {
         &self.downloads
@@ -161,6 +161,12 @@ impl Download {
         self.enabled = true;
     }
 
+    pub fn set_path(&mut self, path: PathBuf) {
+        if let Some(ref mut dlinfo) = self.dlinfo {
+            dlinfo.set_path(path);
+        }
+    }
+
     pub fn set_enable_state(&mut self, newstate: bool) {
         self.enabled = newstate;
     }
@@ -228,6 +234,10 @@ impl DownloadInfo {
             elapsed: Duration::new(0, 0),
             path: PathBuf::new(),
         }
+    }
+
+    pub fn set_path(&mut self, path: PathBuf) {
+        self.path = path;
     }
 
     pub fn get_progress(&self) -> usize {

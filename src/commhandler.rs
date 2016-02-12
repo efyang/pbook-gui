@@ -82,14 +82,12 @@ impl CommHandler {
         if !self.jobs.is_empty() &&
            (self.threadpool.max_count() - self.threadpool.active_count()) > 0 {
             let mut job = self.jobs.pop().unwrap();
-            job.start_download();
             let progress_sender = self.threadpool_progress_send.clone();
             let (tchan_cmd_s, tchan_cmd_r) = channel();
             self.threadpool_cmd_send.push(tchan_cmd_s);
             let mut downloader = Downloader::new(job,
                                                  tchan_cmd_r,
-                                                 progress_sender,
-                                                 Path::new("./testing"));
+                                                 progress_sender);
             self.threadpool.execute(move || {
                 loop {
                     match downloader.begin() {
@@ -139,6 +137,8 @@ impl CommHandler {
                 let id = download.get_id();
                 download.start_download();
                 download.set_enable_state(true);
+                println!("{:?}", cmd.2.clone().unwrap());
+                download.set_path(cmd.2.unwrap());
                 // add to jobs
                 self.jobs.push(download.clone());
                 self.liststore_ids.push(download.get_id());
