@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
 use time::precise_time_s;
 use time;
-use helper::maximum;
+use helper::{minimum, maximum};
 use constants::DOWNLOAD_SPEED_UPDATE_TIME;
 use std::i32;
 
@@ -264,7 +264,7 @@ impl DownloadInfo {
     }
 
     pub fn get_percentage(&self) -> f32 {
-        self.progress as f32 / maximum(self.total as f32, 1.0)
+        minimum(self.progress as f32 / maximum(self.total as f32, 1.0), 1.0)
     }
 
     // to bytes per second
@@ -274,7 +274,12 @@ impl DownloadInfo {
 
     // to seconds
     pub fn get_eta(&self) -> String {
-        let bytes_left = self.total - self.progress;
+        let bytes_left;
+        if self.total < self.progress {
+            bytes_left = 0;
+        } else {
+            bytes_left = self.total - self.progress;
+        }
         let speed = self.get_speed();
         let eta = (bytes_left as f32 / speed) as usize;
         let streta;

@@ -29,8 +29,7 @@ pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<GuiUpdateMsg>,
            command_send_channel: Sender<GuiCmdMsg>) {
     if gtk::init().is_err() {
-        println!("Failed to initialize GTK.");
-        return;
+        panic!("Failed to initialize GTK.");
     }
 
     let current_exe_path;
@@ -218,10 +217,10 @@ lazy_static! {
 }
 
 // Threadlocal storage of Gtk Stuff
-thread_local!(
+thread_local!{
     // (main data, download store, message receiver)
     static GTK_GLOBAL: RefCell<Option<(gtk::ListStore, Receiver<GuiUpdateMsg>)>> = RefCell::new(None)
-    );
+}
 
 // update TLS
 fn update_local() -> Continue {
@@ -240,7 +239,7 @@ fn update_local() -> Continue {
                             // remove index
                             let idx = change.2.unwrap();
                             let mut iter = download_store.iter_nth_child(None, idx as i32)
-                                .expect("failed2");
+                                .expect("no such iter");
                             download_store.remove(&mut iter);
                             DOWNLOADS.lock().unwrap().remove(idx);
                         }
@@ -254,11 +253,20 @@ fn update_local() -> Continue {
                             DOWNLOADS.lock().unwrap().push(download);
                         }
                         "set" => {
-                            let iter = download_store.iter_nth_child(None,
-                                                                     change.2.unwrap() as i32)
-                                .unwrap();
+                            let idx = change.2.unwrap();
+                            let iter = download_store.iter_nth_child(None, idx as i32)
+                                .expect("no such iter");
                             let values = download_to_values(&change.clone().3.unwrap()).unwrap().1;
                             download_store.set_download(&iter, values);
+                        }
+                        "finished" => {
+                            let idx = change.2.unwrap();
+                            let iter = download_store.iter_nth_child(None, idx as i32)
+                                .expect("no such iter");
+                            download_store.set_value(&iter, 2, &1.0f32.to_value());
+                            download_store.set_value(&iter, 3, &"0 B/s".to_value());
+                            download_store.set_value(&iter, 4, &"Done.".to_value());
+                            println!("finished");
                         }
                         "panicked" => {
                             if let Some(id) = change.1 {
@@ -287,7 +295,7 @@ pub fn update_gui() {
 // result should be displayed in status bar if error
 fn update_download(sender: Sender<GuiCmdMsg>,
                    download: Download,
-                   outPath: PathBuf)
+                   out_path: PathBuf)
     -> Result<(), String> {
         let id = download.get_id();
         let message;
@@ -298,11 +306,11 @@ fn update_download(sender: Sender<GuiCmdMsg>,
                 } else {
                     message = "add";
                 }
-                return sender.send_gui_cmd(message.to_owned(), Some(id), Some(outPath));
+                return sender.send_gui_cmd(message.to_owned(), Some(id), Some(out_path));
             }
         }
         // not found in current list
-        return sender.send_gui_cmd("add".to_owned(), Some(id), Some(outPath));
+        return sender.send_gui_cmd("add".to_owned(), Some(id), Some(out_path));
     }
 
 trait CmdSend {

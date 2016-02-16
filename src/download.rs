@@ -10,10 +10,6 @@ use hyper::client::response::Response;
 use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
 
-// NOTE
-// make a Downloader struct which would allow for storage of download path and buffer size
-// url, download path, buffer size
-
 pub struct Downloader {
     name: String,
     url: String,
@@ -34,15 +30,13 @@ impl Downloader {
                progress_send: Sender<TpoolProgressMsg>)
                -> Downloader {
         let dlname = download.get_name().to_string();
-        //println!("{:?}", download.get_path().to_owned().join(spaces_to_underscores(&dlname)));
         Downloader {
             name: dlname.clone(),
             url: download.get_url().to_string(),
             id: download.get_id(),
-            //download_path: path.to_owned().join(spaces_to_underscores(&dlname)),
             cmd_recv: cmd_recv,
             progress_send: progress_send,
-            filepath: download.get_path().to_owned().join(spaces_to_underscores(&dlname)),
+            filepath: download.get_path().to_owned().join(name_to_fname(&dlname)),
             client: {
                 let mut client = Client::new();
                 client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
@@ -221,6 +215,10 @@ pub fn download_url(url: &str, fileout: &str) {
 
 pub fn get_url_filename(url: &str) -> Option<&str> {
     url.split('/').last()
+}
+
+fn name_to_fname(s: &str) -> String {
+    spaces_to_underscores(s) + ".pdf"
 }
 
 fn spaces_to_underscores(s: &str) -> String {

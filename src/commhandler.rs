@@ -37,29 +37,29 @@ impl CommHandler {
     pub fn new(basethreads: usize,
                start_data: Vec<Download>,
                guichannels: (Sender<GuiUpdateMsg>, Receiver<GuiCmdMsg>))
-               -> CommHandler {
-        let (progress_s, progress_r) = channel();
-        let mut id_data_hm = HashMap::new();
-        for download in start_data.iter() {
-            id_data_hm.insert(download.get_id(), download.clone());
+        -> CommHandler {
+            let (progress_s, progress_r) = channel();
+            let mut id_data_hm = HashMap::new();
+            for download in start_data.iter() {
+                id_data_hm.insert(download.get_id(), download.clone());
+            }
+            CommHandler {
+                threadpool: ThreadPool::new(basethreads),
+                data: start_data.clone(),
+                id_data: id_data_hm,
+                liststore_ids: Vec::new(),
+                jobs: Vec::new(),
+                // jobs: start_data,
+                datacache: HashMap::new(),
+                pending_changes: Vec::new(),
+                gui_update_send: guichannels.0,
+                gui_cmd_recv: guichannels.1,
+                threadpool_progress_recv: progress_r,
+                threadpool_progress_send: progress_s,
+                threadpool_cmd_send: Vec::new(),
+                next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
+            }
         }
-        CommHandler {
-            threadpool: ThreadPool::new(basethreads),
-            data: start_data.clone(),
-            id_data: id_data_hm,
-            liststore_ids: Vec::new(),
-            jobs: Vec::new(),
-            // jobs: start_data,
-            datacache: HashMap::new(),
-            pending_changes: Vec::new(),
-            gui_update_send: guichannels.0,
-            gui_cmd_recv: guichannels.1,
-            threadpool_progress_recv: progress_r,
-            threadpool_progress_send: progress_s,
-            threadpool_cmd_send: Vec::new(),
-            next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
-        }
-    }
 
     pub fn update(&mut self) {
         // handle gui cmd
@@ -80,41 +80,43 @@ impl CommHandler {
 
         // start execution of any jobs that exist
         if !self.jobs.is_empty() &&
-           (self.threadpool.max_count() - self.threadpool.active_count()) > 0 {
-            let mut job = self.jobs.pop().unwrap();
-            let progress_sender = self.threadpool_progress_send.clone();
-            let (tchan_cmd_s, tchan_cmd_r) = channel();
-            self.threadpool_cmd_send.push(tchan_cmd_s);
-            let mut downloader = Downloader::new(job,
-                                                 tchan_cmd_r,
-                                                 progress_sender);
-            self.threadpool.execute(move || {
-                loop {
-                    match downloader.begin() {
-                        Ok(_) => {}
-                        Err(e) => panic!(e),
-                    }
-                    // progress_sender.send((job.id, DownloadUpdate::Amount(1))).unwrap();
-                    // need sleep or there will be a memory overflow -> read more than one byte?
-                    match downloader.update() {
-                        Ok(_) => {}
-                        Err(e) => panic!(e),
-                    }
+            (self.threadpool.max_count() - self.threadpool.active_count()) > 0 {
+                let job = self.jobs.pop().unwrap();
+                let progress_sender = self.threadpool_progress_send.clone();
+                let (tchan_cmd_s, tchan_cmd_r) = channel();
+                self.threadpool_cmd_send.push(tchan_cmd_s);
+                let mut downloader = Downloader::new(job,
+                                                     tchan_cmd_r,
+                                                     progress_sender);
+                self.threadpool.execute(move || {
+                    loop {
+                        match downloader.begin() {
+                            Ok(_) => {}
+                            Err(e) => panic!(e),
+                        }
+                        match downloader.update() {
+                            Ok(_) => {}
+                            Err(e) => panic!(e),
+                        }
 
-                    thread::sleep(Duration::from_millis(0));
-                }
-            });
-        }
+                        thread::sleep(Duration::from_millis(0));
+                    }
+                });
+            }
 
         // update the gui
         let current_time = precise_time_ns();
         if current_time >= self.next_gui_update_t {
             // add everything from the datacache to the main data
+            let mut idx = 0;
             for download in self.data.iter_mut() {
                 let id = download.get_id();
                 if download.is_downloading() {
                     download.increment_progress(*self.datacache.get(&id).unwrap_or(&0))
-                            .unwrap();
+                        .unwrap();
+                    // add to pending changes
+                    self.pending_changes.push(("set".to_owned(), Some(id), Some(idx), Some(download.to_owned())));
+                    idx += 1;
                 }
             }
             // clear datacache
@@ -206,8 +208,26 @@ impl CommHandler {
                         // remove from datacache
                         // already finished so no need to have cache anymore
                         self.datacache.remove(&dlid);
+                        // get idx
+                        let mut idx = 0;
+                        for download in self.data.iter() {
+                            if &download.get_id() == &dlid {
+                                break;
+                            }
+                            if download.is_downloading() {
+                                idx += 1;
+                            }
+                        }
+                        // remove any other messages about this download
+                        let data_len = self.data.len();
+                        for i in (0..data_len).rev() {
+                            let id = self.data[i].get_id();
+                            if id == dlid {
+                                self.data.remove(i);
+                            }
+                        }
                         // send message to gui
-                        self.pending_changes.push((message, Some(dlid), None, None));
+                        self.pending_changes.push((message, Some(dlid), Some(idx), None));
                     }
                     _ => {}
                 }
