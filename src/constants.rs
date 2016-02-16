@@ -18,4 +18,4 @@ pub const GTK_THEME_CFG: &'static str = "theme.txt";
 pub const DOWNLOAD_SPEED_UPDATE_TIME: f64 = 0.1;
 
 // milliseconds before giving up on a connection
-pub const CONNECT_MILLI_TIMEMOUT: u64 = 500;
+pub const CONNECT_MILLI_TIMEMOUT: u64 = 5000;
