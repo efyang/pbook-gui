@@ -1,5 +1,6 @@
 use data::*;
 use std::sync::mpsc::{channel, Sender, Receiver, SendError};
+use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::thread;
 use threadpool::ThreadPool;
@@ -12,6 +13,8 @@ use constants::GUI_UPDATE_TIME;
 
 pub struct CommHandler {
     threadpool: ThreadPool,
+    max_threads: Arc<Mutex<usize>>,
+    current_threads: Arc<Mutex<usize>>,
     // the current model
     data: Vec<Download>,
     // id:download
@@ -45,6 +48,8 @@ impl CommHandler {
             }
             CommHandler {
                 threadpool: ThreadPool::new(basethreads),
+                max_threads: Arc::new(Mutex::new(basethreads)),
+                current_threads: Arc::new(Mutex::new(0)),
                 data: start_data.clone(),
                 id_data: id_data_hm,
                 liststore_ids: Vec::new(),
@@ -79,8 +84,10 @@ impl CommHandler {
         }
 
         // start execution of any jobs that exist
+        let max_threads = self.max_threads.lock().unwrap().clone();
+        let current_threads = self.current_threads.lock().unwrap().clone();
         if !self.jobs.is_empty() &&
-            (self.threadpool.max_count() - self.threadpool.active_count()) > 0 {
+            (max_threads - current_threads) > 0 {
                 let job = self.jobs.pop().unwrap();
                 let progress_sender = self.threadpool_progress_send.clone();
                 let (tchan_cmd_s, tchan_cmd_r) = channel();
@@ -88,18 +95,37 @@ impl CommHandler {
                 let mut downloader = Downloader::new(job,
                                                      tchan_cmd_r,
                                                      progress_sender);
-                self.threadpool.execute(move || {
-                    loop {
+                {
+                    *self.current_threads.lock().unwrap() += 1;
+                    let max_threads = self.max_threads.clone();
+                    let current_threads = self.current_threads.clone();
+                    self.threadpool.execute(move || {
+                        let mut keep_downloading = true;
                         match downloader.begin() {
                             Ok(_) => {}
-                            Err(e) => panic!(e),
+                            Err(e) => {
+                                *current_threads.lock().unwrap() -= 1;
+                                panic!(e);
+                            },
                         }
-                        match downloader.update() {
-                            Ok(_) => {}
-                            Err(e) => panic!(e),
+                        while keep_downloading {
+                            match downloader.update() {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    *current_threads.lock().unwrap() -= 1;
+                                    match &e as &str {
+                                        "finished" => {
+                                            keep_downloading = false;
+                                        }
+                                        _ => {
+                                            panic!(e);
+                                        }
+                                    }
+                                },
+                            }
                         }
-                    }
-                });
+                    });
+                }
             }
 
         // update the gui
@@ -137,7 +163,6 @@ impl CommHandler {
                 let id = download.get_id();
                 download.start_download();
                 download.set_enable_state(true);
-                println!("{:?}", cmd.2.clone().unwrap());
                 download.set_path(cmd.2.unwrap());
                 // add to jobs
                 self.jobs.push(download.clone());

@@ -252,7 +252,7 @@ impl DownloadInfo {
         self.progress += increment;
         let timenow = precise_time_s();
         if timenow >= self.recent_progress_clear_time {
-            self.recent_progress = 0;
+            self.recent_progress = self.recent_progress/2;
             self.recent_progress_clear_time = timenow + DOWNLOAD_SPEED_UPDATE_TIME;
         } else {
             self.recent_progress += increment;

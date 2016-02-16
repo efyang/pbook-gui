@@ -92,7 +92,6 @@ impl Downloader {
             Err(_) => {}
         }
         // download more bytes
-        let mut finished = false;
         if let Some(ref mut outfile) = self.outfile {
             if let Some(ref mut stream) = self.stream {
                 match stream.read(&mut self.buffer) {
@@ -102,7 +101,7 @@ impl Downloader {
                         self.progress_send
                             .send((self.id, DownloadUpdate::Message("finished".to_owned())))
                             .expect("Failed to send message");
-                        finished = true;
+                        return Err("finished".to_owned());
                     }
                     Ok(n) => {
                         // got n bytes
@@ -123,11 +122,6 @@ impl Downloader {
                     }
                 }
             }
-        }
-
-        if finished {
-            drop(self);
-            panic!();
         }
 
         Ok(())
