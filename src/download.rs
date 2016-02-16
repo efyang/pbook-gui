@@ -192,37 +192,6 @@ fn make_chdir_error(errorstring: Error, kind: &str) -> String {
             errorstring)
 }
 
-pub fn download_url_default(url: &str) {
-    download_url(url, get_url_filename(url).unwrap());
-}
-
-pub fn download_url(url: &str, fileout: &str) {
-    let ce = current_exe().unwrap();
-    let cd = ce.parent().unwrap();
-    let dldir = cd.join("downloads");
-    fs::create_dir_all(dldir.clone()).unwrap();
-    let filename = dldir.join(fileout);
-    let mut client = Client::new();
-    client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
-    let mut outfile = BufWriter::new(File::create(filename).unwrap());
-    let mut stream = client.get(url).send().unwrap();
-    let mut buf: [u8; 16] = [0; 16];
-    loop {
-        match stream.read(&mut buf) {
-            Ok(0) => break,
-            Ok(n) => {
-                outfile.write(&buf[..n]).unwrap();
-            }
-            Err(e) => panic!(e),
-        }
-    }
-    outfile.flush().unwrap()
-}
-
-pub fn get_url_filename(url: &str) -> Option<&str> {
-    url.split('/').last()
-}
-
 fn name_to_fname(s: &str) -> String {
     spaces_to_underscores(s) + ".pdf"
 }
