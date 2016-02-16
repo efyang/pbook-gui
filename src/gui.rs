@@ -263,7 +263,7 @@ fn update_local() -> Continue {
                             let idx = change.2.unwrap();
                             let iter = download_store.iter_nth_child(None, idx as i32)
                                 .expect("no such iter");
-                            download_store.set_value(&iter, 2, &1.0f32.to_value());
+                            download_store.set_value(&iter, 2, &100.0f32.to_value());
                             download_store.set_value(&iter, 3, &"0 B/s".to_value());
                             download_store.set_value(&iter, 4, &"Done.".to_value());
                             println!("finished");
@@ -405,9 +405,11 @@ fn download_to_values(dl: &Download) -> Option<(u64, (String, String, f32, Strin
             let name = dl.get_name().to_string().shorten(50);
             let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
             let percent = dlinfo.get_percentage();
+            // actual gtk amount is out of 100.0
+            let actual_gtk_amount = percent * 100.0;
             let speed = format!("{}/s", dlinfo.get_speed().convert_to_byte_units(0));
             let eta = dlinfo.get_eta();
-            Some((dlid, (name, size, percent, speed, eta)))
+            Some((dlid, (name, size, actual_gtk_amount, speed, eta)))
         }
         &None => None,
     }

@@ -1,6 +1,6 @@
 use std::sync::mpsc::{Sender, Receiver};
 use std::io::prelude::*;
-use std::io::{Error, BufWriter};
+use std::io::{Error, BufWriter, ErrorKind};
 use std::fs::{File, copy};
 use std::fs;
 use std::time::Duration;
@@ -113,7 +113,13 @@ impl Downloader {
                     }
                     Err(e) => {
                         // Some error
-                        panic!(e);
+                        if e.kind() != ErrorKind::WouldBlock {
+                            println!("Error Type: {:?}", e.kind());
+                            println!("Name: {}", self.name);
+                            println!("Url: {}", self.url);
+                            println!("Error: {:?}", e.into_inner());
+                            panic!("Error");
+                        }
                     }
                 }
             }
