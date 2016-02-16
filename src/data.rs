@@ -212,6 +212,7 @@ pub struct DownloadInfo {
     failed: bool,
     progress: usize,
     total: usize,
+    previous_progress: usize,
     recent_progress: usize,
     recent_progress_clear_time: f64,
     elapsed: Duration,
@@ -224,6 +225,7 @@ impl DownloadInfo {
             failed: false,
             progress: 0,
             total: 0,
+            previous_progress: 0,
             recent_progress: 0,
             recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,
             elapsed: Duration::new(0, 0),
@@ -236,6 +238,7 @@ impl DownloadInfo {
             failed: false,
             progress: 0,
             total: total,
+            previous_progress: 0, 
             recent_progress: 0,
             recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,
             elapsed: Duration::new(0, 0),
@@ -263,7 +266,12 @@ impl DownloadInfo {
         self.progress += increment;
         let timenow = precise_time_s();
         if timenow >= self.recent_progress_clear_time {
-            self.recent_progress = self.recent_progress/2;
+            self.previous_progress = self.recent_progress;
+            if self.progress == self.total {
+                self.recent_progress /= 2;
+            } else {
+                self.recent_progress = (self.recent_progress + self.previous_progress)/2;
+            }
             self.recent_progress_clear_time = timenow + DOWNLOAD_SPEED_UPDATE_TIME;
         } else {
             self.recent_progress += increment;

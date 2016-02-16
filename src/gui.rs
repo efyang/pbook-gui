@@ -266,7 +266,6 @@ fn update_local() -> Continue {
                             download_store.set_value(&iter, 2, &100.0f32.to_value());
                             download_store.set_value(&iter, 3, &"0 B/s".to_value());
                             download_store.set_value(&iter, 4, &"Done.".to_value());
-                            println!("finished");
                         }
                         "panicked" => {
                             if let Some(id) = change.1 {

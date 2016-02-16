@@ -20,6 +20,7 @@ pub struct CommHandler {
     // id:download
     id_data: HashMap<u64, Download>,
     liststore_ids: Vec<u64>,
+    finished_ids: Vec<u64>,
     jobs: Vec<Download>,
     // download id, amount of bytes to add
     datacache: HashMap<u64, usize>,
@@ -53,6 +54,7 @@ impl CommHandler {
                 data: start_data.clone(),
                 id_data: id_data_hm,
                 liststore_ids: Vec::new(),
+                finished_ids: Vec::with_capacity(start_data.len()),
                 jobs: Vec::new(),
                 // jobs: start_data,
                 datacache: HashMap::new(),
@@ -255,13 +257,14 @@ impl CommHandler {
                             }
                         }
                         // remove any other messages about this download
-                        let data_len = self.data.len();
-                        for i in (0..data_len).rev() {
-                            let id = self.data[i].get_id();
-                            if id == dlid {
-                                self.data.remove(i);
-                            }
-                        }
+                        //let changes_len = self.pending_changes.len();
+                        //for i in (0..changes_len).rev() {
+                            //let id = self.pending_changes[i].2.unwrap_or(0) as u64;
+                            //if id == dlid {
+                                //self.pending_changes.remove(i);
+                            //}
+                        //}
+                        self.finished_ids.push(dlid);
                         // send message to gui
                         self.pending_changes.push((message, Some(dlid), Some(idx), None));
                     }
