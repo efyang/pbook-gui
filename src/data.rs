@@ -12,6 +12,7 @@ use std::i32;
 pub enum DownloadUpdate {
     Message(String),
     Amount(usize),
+    SetSize(usize),
 }
 
 pub type TpoolProgressMsg = (u64, DownloadUpdate);
@@ -161,6 +162,12 @@ impl Download {
         self.enabled = true;
     }
 
+    pub fn set_total(&mut self, total: usize) {
+        if let Some(ref mut dlinfo) = self.dlinfo {
+            dlinfo.set_total(total);
+        }
+    }
+
     pub fn set_path(&mut self, path: PathBuf) {
         if let Some(ref mut dlinfo) = self.dlinfo {
             dlinfo.set_path(path);
@@ -234,6 +241,10 @@ impl DownloadInfo {
             elapsed: Duration::new(0, 0),
             path: PathBuf::new(),
         }
+    }
+
+    pub fn set_total(&mut self, total: usize) {
+        self.total = total;
     }
 
     pub fn set_path(&mut self, path: PathBuf) {

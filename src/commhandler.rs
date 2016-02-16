@@ -220,6 +220,19 @@ impl CommHandler {
     fn handle_progress_msg(&mut self, progress: TpoolProgressMsg) {
         let dlid = progress.0;
         match progress.1 {
+            DownloadUpdate::SetSize(content_length) => {
+                let mut idx = 0;
+                for download in self.data.iter_mut() {
+                    if &download.get_id() == &dlid {
+                        download.set_total(content_length);
+                        break;
+                    } 
+                    if download.is_downloading() {
+                        idx += 1;
+                    }
+                }
+                self.id_data.get_mut(&dlid).expect("No such id_data entry").set_total(content_length);
+            }
             DownloadUpdate::Amount(dlamnt) => {
                 // add to cache
                 self.datacache.increment(dlid, dlamnt);
