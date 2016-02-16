@@ -98,8 +98,6 @@ impl CommHandler {
                             Ok(_) => {}
                             Err(e) => panic!(e),
                         }
-
-                        thread::sleep(Duration::from_millis(0));
                     }
                 });
             }
