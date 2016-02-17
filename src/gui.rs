@@ -41,7 +41,7 @@ pub fn gui(data: &mut Vec<Category>,
         }
     };
     let current_working_dir = current_exe_path.parent()
-        .unwrap_or(Path::new(".."));
+                                              .unwrap_or(Path::new(".."));
     let default_config_path = current_working_dir.join(DEFAULT_GTK_CSS_CONFIG);
     let secondary_config_path = current_working_dir.join(SECONDARY_GTK_CSS_CONFIG);
 
@@ -67,7 +67,7 @@ pub fn gui(data: &mut Vec<Category>,
     *ID_DOWNLOAD_HM.lock().unwrap() = {
         let mut id_download_hm = HashMap::new();
         for download in DOWNLOADS.lock().unwrap().iter() {
-            id_download_hm.insert(download.get_id(), download.clone());
+            id_download_hm.insert(download.id(), download.clone());
         }
         id_download_hm
     };
@@ -138,9 +138,11 @@ pub fn gui(data: &mut Vec<Category>,
             match path.get_depth() {
                 1 => {
                     let category = category.to_owned();
-                    for download in category.get_downloads().iter() {
+                    for download in category.downloads().iter() {
                         // NOTE: PLACEHOLDER PATHS
-                        if let Err(error) = update_download(command_send_channel.clone(), download.to_owned(), download_dir.to_path_buf()) {
+                        if let Err(error) = update_download(command_send_channel.clone(),
+                                                            download.to_owned(),
+                                                            download_dir.to_path_buf()) {
                             println!("{}", error);
                         }
                     }
@@ -148,7 +150,9 @@ pub fn gui(data: &mut Vec<Category>,
                 }
                 2 => {
                     let download = category.get_download_at_idx(indices[1] as usize);
-                    if let Err(error) = update_download(command_send_channel.clone(), download.to_owned(), download_dir.to_path_buf()) {
+                    if let Err(error) = update_download(command_send_channel.clone(),
+                                                        download.to_owned(),
+                                                        download_dir.to_path_buf()) {
                         println!("{}", error);
                     }
                     is_category = false;
@@ -205,8 +209,8 @@ pub fn gui(data: &mut Vec<Category>,
 
 fn toggle_bool_iter(iter: &gtk::TreeIter, category_store: &gtk::TreeStore) {
     let current_value = category_store.get_value(iter, 1)
-        .get::<bool>()
-        .expect("No Value");
+                                      .get::<bool>()
+                                      .expect("No Value");
     let new_value = (!current_value).to_value();
     category_store.set_value(iter, 1, &new_value);
 }
@@ -239,7 +243,7 @@ fn update_local() -> Continue {
                             // remove index
                             let idx = change.2.unwrap();
                             let mut iter = download_store.iter_nth_child(None, idx as i32)
-                                .expect("no such iter");
+                                                         .expect("no such iter");
                             download_store.remove(&mut iter);
                             DOWNLOADS.lock().unwrap().remove(idx);
                         }
@@ -255,14 +259,14 @@ fn update_local() -> Continue {
                         "set" => {
                             let idx = change.2.unwrap();
                             let iter = download_store.iter_nth_child(None, idx as i32)
-                                .expect("no such iter");
+                                                     .expect("no such iter");
                             let values = download_to_values(&change.clone().3.unwrap()).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
                         "finished" => {
                             let idx = change.2.unwrap();
                             let iter = download_store.iter_nth_child(None, idx as i32)
-                                .expect("no such iter");
+                                                     .expect("no such iter");
                             download_store.set_value(&iter, 2, &100.0f32.to_value());
                             download_store.set_value(&iter, 3, &"0 B/s".to_value());
                             download_store.set_value(&iter, 4, &"Done.".to_value());
@@ -295,29 +299,29 @@ pub fn update_gui() {
 fn update_download(sender: Sender<GuiCmdMsg>,
                    download: Download,
                    out_path: PathBuf)
-    -> Result<(), String> {
-        let id = download.get_id();
-        let message;
-        for dl in DOWNLOADS.lock().unwrap().iter() {
-            if dl.get_id() == id {
-                if dl.is_enabled() {
-                    message = "remove";
-                } else {
-                    message = "add";
-                }
-                return sender.send_gui_cmd(message.to_owned(), Some(id), Some(out_path));
+                   -> Result<(), String> {
+    let id = download.id();
+    let message;
+    for dl in DOWNLOADS.lock().unwrap().iter() {
+        if dl.id() == id {
+            if dl.enabled() {
+                message = "remove";
+            } else {
+                message = "add";
             }
+            return sender.send_gui_cmd(message.to_owned(), Some(id), Some(out_path));
         }
-        // not found in current list
-        return sender.send_gui_cmd("add".to_owned(), Some(id), Some(out_path));
     }
+    // not found in current list
+    return sender.send_gui_cmd("add".to_owned(), Some(id), Some(out_path));
+}
 
 trait CmdSend {
     fn send_gui_cmd(&self,
                     cmd: String,
                     id: Option<u64>,
                     path: Option<PathBuf>)
-        -> Result<(), String>;
+                    -> Result<(), String>;
 }
 
 impl CmdSend for Sender<GuiCmdMsg> {
@@ -325,12 +329,12 @@ impl CmdSend for Sender<GuiCmdMsg> {
                     cmd: String,
                     id: Option<u64>,
                     path: Option<PathBuf>)
-        -> Result<(), String> {
-            match self.send((cmd, id, path)) {
-                Ok(_) => Ok(()),
-                Err(e) => Err(format!("{}", e)),
-            }
+                    -> Result<(), String> {
+        match self.send((cmd, id, path)) {
+            Ok(_) => Ok(()),
+            Err(e) => Err(format!("{}", e)),
         }
+    }
 }
 
 trait AddCategories {
@@ -340,16 +344,16 @@ trait AddCategories {
 
 impl AddCategories for gtk::TreeStore {
     fn add_category(&self, category: &Category) {
-        let category_name = category.get_name();
-        let downloads = category.get_downloads();
+        let category_name = category.name();
+        let downloads = category.downloads();
         let iter = self.append(None);
-        let category_download_bool = category.is_enabled().to_value();
+        let category_download_bool = category.enabled().to_value();
         self.set_value(&iter, 0, &category_name.to_value());
         self.set_value(&iter, 1, &category_download_bool);
         // add all of the downloads
         for download in downloads.iter() {
-            let download_name = download.get_name();
-            let download_download_bool = download.is_enabled().to_value();
+            let download_name = download.name();
+            let download_download_bool = download.enabled().to_value();
             let child_iter = self.append(Some(&iter));
             self.set_value(&child_iter, 0, &download_name.to_value());
             self.set_value(&child_iter, 1, &download_download_bool);
@@ -397,17 +401,17 @@ fn make_liststore_model(data: &Vec<Download>) -> HashMap<u64, (String, String, f
 }
 
 fn download_to_values(dl: &Download) -> Option<(u64, (String, String, f32, String, String))> {
-    match dl.get_dlinfo() {
-        &Some(ref dlinfo) => {
-            let dlid = dl.get_id();
+    match dl.download_info() {
+        &Some(ref download_info) => {
+            let dlid = dl.id();
             // shorten needed until ellipsize is implemented for CellRendererText
-            let name = dl.get_name().to_string().shorten(50);
-            let size = (dlinfo.get_total() as f32).convert_to_byte_units(0);
-            let percent = dlinfo.get_percentage();
+            let name = dl.name().to_string().shorten(50);
+            let size = (download_info.total() as f32).convert_to_byte_units(0);
+            let percent = download_info.percentage();
             // actual gtk amount is out of 100.0
             let actual_gtk_amount = percent * 100.0;
-            let speed = format!("{}/s", dlinfo.get_speed().convert_to_byte_units(0));
-            let eta = dlinfo.get_eta();
+            let speed = format!("{}/s", download_info.speed().convert_to_byte_units(0));
+            let eta = download_info.eta();
             Some((dlid, (name, size, actual_gtk_amount, speed, eta)))
         }
         &None => None,

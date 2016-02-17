@@ -7,7 +7,7 @@ use std::time::Duration;
 use std::env::current_exe;
 use hyper::client::Client;
 use hyper::client::response::Response;
-use hyper::header::{ContentLength};
+use hyper::header::ContentLength;
 use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
 
@@ -15,7 +15,7 @@ pub struct Downloader {
     name: String,
     url: String,
     id: u64,
-    //download_path: PathBuf,
+    // download_path: PathBuf,
     cmd_recv: Receiver<TpoolCmdMsg>,
     progress_send: Sender<TpoolProgressMsg>,
     filepath: PathBuf,
@@ -29,25 +29,25 @@ impl Downloader {
     pub fn new(download: Download,
                cmd_recv: Receiver<TpoolCmdMsg>,
                progress_send: Sender<TpoolProgressMsg>)
-        -> Downloader {
-            let dlname = download.get_name().to_string();
-            Downloader {
-                name: dlname.clone(),
-                url: download.get_url().to_string(),
-                id: download.get_id(),
-                cmd_recv: cmd_recv,
-                progress_send: progress_send,
-                filepath: download.get_path().to_owned().join(name_to_fname(&dlname)),
-                client: {
-                    let mut client = Client::new();
-                    client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
-                    client
-                },
-                stream: None,
-                outfile: None,
-                buffer: [0; 16],
-            }
+               -> Downloader {
+        let dlname = download.name().to_string();
+        Downloader {
+            name: dlname.clone(),
+            url: download.url().to_string(),
+            id: download.id(),
+            cmd_recv: cmd_recv,
+            progress_send: progress_send,
+            filepath: download.path().to_owned().join(name_to_fname(&dlname)),
+            client: {
+                let mut client = Client::new();
+                client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
+                client
+            },
+            stream: None,
+            outfile: None,
+            buffer: [0; 16],
         }
+    }
 
     pub fn begin(&mut self) -> Result<(), String> {
         if let None = self.stream {
@@ -68,7 +68,7 @@ impl Downloader {
                     self.progress_send
                         .send((self.id, DownloadUpdate::SetSize(**content_length as usize)))
                         .expect("Failed to send content length");
-                },
+                }
                 None => {}
             }
         }

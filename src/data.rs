@@ -28,7 +28,7 @@ impl ToDownloads for Vec<Category> {
     fn to_downloads(&self) -> Vec<Download> {
         let mut downloads = Vec::new();
         for category in self.iter() {
-            downloads.extend(category.get_downloads().iter().cloned());
+            downloads.extend(category.downloads().iter().cloned());
         }
         downloads
     }
@@ -47,20 +47,35 @@ impl Category {
             downloads: downloads,
         }
     }
+    
+    // Getter functions
 
-    pub fn get_name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
+    pub fn downloads(&self) -> &[Download] {
+        &self.downloads
+    }
+
+    pub fn ids(&self) -> Vec<u64> {
+        self.downloads.iter().map(|dl| dl.id()).collect::<Vec<u64>>()
+    }
+
+    pub fn get_download_at_idx(&self, idx: usize) -> &Download {
+        &self.downloads[idx]
+    }
+
+    pub fn enabled(&self) -> bool {
+        self.downloads.iter().all(|x| x.enabled())
+    }
+
+    // Setter functions
+    
     pub fn add_download(&mut self, download: Download) {
         self.downloads.push(download);
     }
-    pub fn set_enable_state_all(&mut self, enable_state: bool) {
-        for dl in self.downloads.iter_mut() {
-            dl.set_enable_state(enable_state);
-        }
-    }
-
+    
     pub fn begin_download(&mut self, download_id: &u64) -> Result<(), String> {
         let mut exists = false;
         for dl in self.downloads.iter_mut() {
@@ -76,44 +91,36 @@ impl Category {
             Err(format!("No such download id {} exists.", download_id))
         }
     }
-
-    pub fn increment_download_progress(&mut self,
-                                       download_id: &u64,
-                                       increment: usize)
-        -> Result<(), String> {
-            for dl in self.downloads.iter_mut() {
-                if &dl.id == download_id {
-                    return dl.increment_progress(increment);
-                }
-            }
-            // default if not found
-            Err(format!("No such download id {} exists.", download_id))
-        }
-
-    pub fn get_downloads(&self) -> &[Download] {
-        &self.downloads
-    }
-
-    pub fn is_enabled(&self) -> bool {
-        self.downloads.iter().all(|x| x.is_enabled())
-    }
-
+   
     pub fn begin_downloading_all(&mut self) {
         for download in self.downloads.iter_mut() {
             download.start_download();
         }
     }
 
-    pub fn get_ids(&self) -> Vec<u64> {
-        self.downloads.iter().map(|dl| dl.get_id()).collect::<Vec<u64>>()
+    pub fn set_enable_state_all(&mut self, enable_state: bool) {
+        for dl in self.downloads.iter_mut() {
+            dl.set_enable_state(enable_state);
+        }
     }
 
-    pub fn get_download_at_idx(&self, idx: usize) -> &Download {
-        &self.downloads[idx]
+    // Incrementatal functions
+    
+    pub fn increment_download_progress(&mut self,
+                                       download_id: &u64,
+                                       increment: usize)
+                                       -> Result<(), String> {
+        for dl in self.downloads.iter_mut() {
+            if &dl.id == download_id {
+                return dl.increment_progress(increment);
+            }
+        }
+        // default if not found
+        Err(format!("No such download id {} exists.", download_id))
     }
 }
 
-pub fn get_dl_id(name: &str, url: &str) -> u64 {
+pub fn get_hash_id(name: &str, url: &str) -> u64 {
     let mut hasher = SipHasher::new();
     format!("{}{}", name, url).hash(&mut hasher);
     hasher.finish()
@@ -121,56 +128,71 @@ pub fn get_dl_id(name: &str, url: &str) -> u64 {
 
 #[derive(Debug, Clone)]
 pub struct Download {
+    id: u64,
     name: String,
     url: String,
     enabled: bool,
-    dlinfo: Option<DownloadInfo>, /* optional depending on whether
+    download_info: Option<DownloadInfo>, /* optional depending on whether
                                    * its currently being downloaded */
-    id: u64,
 }
 
 impl Download {
     pub fn new(name: &str, url: &str) -> Download {
         // id is siphash of name + url
         Download {
+            id: get_hash_id(name, url),
             name: name.to_string(),
             url: url.to_string(),
             enabled: false,
-            dlinfo: None,
-            id: get_dl_id(name, url),
+            download_info: None,
         }
     }
 
-    pub fn increment_progress(&mut self, increment: usize) -> Result<(), String> {
-        if let Some(ref mut dlinfo) = self.dlinfo {
-            dlinfo.increment_progress(increment);
-            Ok(())
-        } else {
-            Err("Progress cannot be incremented because it is not downloading.".to_string())
-        }
+    // Getter functions
+
+    pub fn id(&self) -> u64 {
+        self.id
     }
 
-    pub fn is_downloading(&self) -> bool {
-        self.dlinfo.is_some()
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
-    pub fn is_enabled(&self) -> bool {
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
+    pub fn enabled(&self) -> bool {
         self.enabled
     }
 
+    pub fn download_info(&self) -> &Option<DownloadInfo> {
+        &self.download_info
+    }
+
+    pub fn downloading(&self) -> bool {
+        self.download_info.is_some()
+    }
+
+    pub fn path(&self) -> PathBuf {
+        self.clone().download_info.unwrap().get_path()
+    }
+
+    // Setter functions
+    
     pub fn enable(&mut self) {
         self.enabled = true;
     }
 
     pub fn set_total(&mut self, total: usize) {
-        if let Some(ref mut dlinfo) = self.dlinfo {
-            dlinfo.set_total(total);
+        if let Some(ref mut download_info) = self.download_info {
+            download_info.set_total(total);
         }
     }
 
     pub fn set_path(&mut self, path: PathBuf) {
-        if let Some(ref mut dlinfo) = self.dlinfo {
-            dlinfo.set_path(path);
+        if let Some(ref mut download_info) = self.download_info {
+            download_info.set_path(path);
         }
     }
 
@@ -179,31 +201,22 @@ impl Download {
     }
 
     pub fn start_download(&mut self) {
-        self.dlinfo = Some(DownloadInfo::new());
+        self.download_info = Some(DownloadInfo::new());
     }
 
     pub fn stop_download(&mut self) {
-        self.dlinfo = None;
+        self.download_info = None;
     }
+    
+    // Incremental functions
 
-    pub fn get_name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn get_url(&self) -> &str {
-        &self.url
-    }
-
-    pub fn get_dlinfo(&self) -> &Option<DownloadInfo> {
-        &self.dlinfo
-    }
-
-    pub fn get_path(&self) -> PathBuf {
-        self.clone().dlinfo.unwrap().get_path()
-    }
-
-    pub fn get_id(&self) -> u64 {
-        self.id
+    pub fn increment_progress(&mut self, increment: usize) -> Result<(), String> {
+        if let Some(ref mut download_info) = self.download_info {
+            download_info.increment_progress(increment);
+            Ok(())
+        } else {
+            Err("Progress cannot be incremented because it is not downloading.".to_string())
+        }
     }
 }
 
@@ -238,7 +251,7 @@ impl DownloadInfo {
             failed: false,
             progress: 0,
             total: total,
-            previous_progress: 0, 
+            previous_progress: 0,
             recent_progress: 0,
             recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,
             elapsed: Duration::new(0, 0),
@@ -246,60 +259,35 @@ impl DownloadInfo {
         }
     }
 
-    pub fn set_total(&mut self, total: usize) {
-        self.total = total;
-    }
+    // Getters
 
-    pub fn set_path(&mut self, path: PathBuf) {
-        self.path = path;
-    }
-
-    pub fn get_progress(&self) -> usize {
-        self.progress
-    }
-
-    pub fn get_total(&self) -> usize {
+    pub fn total(&self) -> usize {
         self.total
     }
 
-    pub fn increment_progress(&mut self, increment: usize) {
-        self.progress += increment;
-        let timenow = precise_time_s();
-        if timenow >= self.recent_progress_clear_time {
-            self.previous_progress = self.recent_progress;
-            if self.progress == self.total {
-                self.recent_progress /= 2;
-            } else {
-                self.recent_progress = (self.recent_progress + self.previous_progress)/2;
-            }
-            self.recent_progress_clear_time = timenow + DOWNLOAD_SPEED_UPDATE_TIME;
-        } else {
-            self.recent_progress += increment;
-        }
-    }
 
     pub fn get_path(&self) -> PathBuf {
         self.path.to_path_buf()
     }
 
-    pub fn get_percentage(&self) -> f32 {
+    pub fn percentage(&self) -> f32 {
         minimum(self.progress as f32 / maximum(self.total as f32, 1.0), 1.0)
     }
 
     // to bytes per second
-    pub fn get_speed(&self) -> f32 {
+    pub fn speed(&self) -> f32 {
         self.recent_progress as f32 / DOWNLOAD_SPEED_UPDATE_TIME as f32
     }
 
     // to seconds
-    pub fn get_eta(&self) -> String {
+    pub fn eta(&self) -> String {
         let bytes_left;
         if self.total < self.progress {
             bytes_left = 0;
         } else {
             bytes_left = self.total - self.progress;
         }
-        let speed = self.get_speed();
+        let speed = self.speed();
         let eta = (bytes_left as f32 / speed) as usize;
         let streta;
         if maximum(eta, i32::MAX as usize) == eta {
@@ -309,4 +297,33 @@ impl DownloadInfo {
         }
         streta
     }
+
+    // Setters
+    
+    pub fn set_total(&mut self, total: usize) {
+        self.total = total;
+    }
+
+    pub fn set_path(&mut self, path: PathBuf) {
+        self.path = path;
+    }
+
+    // Incremental functions
+
+    pub fn increment_progress(&mut self, increment: usize) {
+        self.progress += increment;
+        let timenow = precise_time_s();
+        if timenow >= self.recent_progress_clear_time {
+            self.previous_progress = self.recent_progress;
+            if self.progress == self.total {
+                self.recent_progress /= 2;
+            } else {
+                self.recent_progress = (self.recent_progress + self.previous_progress) / 2;
+            }
+            self.recent_progress_clear_time = timenow + DOWNLOAD_SPEED_UPDATE_TIME;
+        } else {
+            self.recent_progress += increment;
+        }
+    }
+
 }

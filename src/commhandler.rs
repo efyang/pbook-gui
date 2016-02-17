@@ -44,7 +44,7 @@ impl CommHandler {
             let (progress_s, progress_r) = channel();
             let mut id_data_hm = HashMap::new();
             for download in start_data.iter() {
-                id_data_hm.insert(download.get_id(), download.clone());
+                id_data_hm.insert(download.id(), download.clone());
             }
             CommHandler {
                 threadpool: ThreadPool::new(basethreads),
@@ -133,8 +133,8 @@ impl CommHandler {
             // add everything from the datacache to the main data
             let mut idx = 0;
             for download in self.data.iter_mut() {
-                let id = download.get_id();
-                if download.is_downloading() {
+                let id = download.id();
+                if download.downloading() {
                     download.increment_progress(*self.datacache.get(&id).unwrap_or(&0))
                         .unwrap();
                     // add to pending changes
@@ -159,18 +159,18 @@ impl CommHandler {
         match &cmd.0 as &str {
             "add" => {
                 let mut download = self.id_data[&cmd.1.unwrap()].clone();
-                let id = download.get_id();
+                let id = download.id();
                 download.start_download();
                 download.set_enable_state(true);
                 download.set_path(cmd.2.unwrap());
                 // add to jobs
                 self.jobs.push(download.clone());
-                self.liststore_ids.push(download.get_id());
+                self.liststore_ids.push(download.id());
                 // add to changes
                 self.pending_changes.push((cmd.0, None, None, Some(download.clone())));
                 // start in main data model
                 for item in self.data.iter_mut() {
-                    if item.get_id() == id {
+                    if item.id() == id {
                         item.set_enable_state(true);
                         item.start_download();
                         break;
@@ -181,7 +181,7 @@ impl CommHandler {
                 let id = cmd.1.unwrap();
                 // remove from jobs if existing
                 for idx in 0..self.jobs.len() {
-                    if self.jobs[idx].get_id() == id {
+                    if self.jobs[idx].id() == id {
                         self.jobs.remove(idx);
                         break;
                     }
@@ -189,7 +189,7 @@ impl CommHandler {
                 // remove from main data model
                 for idx in 0..self.data.len() {
                     let ref mut dl = self.data[idx];
-                    if dl.get_id() == id {
+                    if dl.id() == id {
                         dl.set_enable_state(false);
                         dl.stop_download();
                         break;
@@ -222,11 +222,11 @@ impl CommHandler {
             DownloadUpdate::SetSize(content_length) => {
                 let mut idx = 0;
                 for download in self.data.iter_mut() {
-                    if &download.get_id() == &dlid {
+                    if &download.id() == &dlid {
                         download.set_total(content_length);
                         break;
                     } 
-                    if download.is_downloading() {
+                    if download.downloading() {
                         idx += 1;
                     }
                 }
@@ -243,10 +243,10 @@ impl CommHandler {
                         // get idx
                         let mut idx = 0;
                         for download in self.data.iter_mut() {
-                            if &download.get_id() == &dlid {
+                            if &download.id() == &dlid {
                                 break;
                             }
-                            if download.is_downloading() {
+                            if download.downloading() {
                                 idx += 1;
                             }
                         }

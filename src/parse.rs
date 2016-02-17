@@ -43,8 +43,8 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
     // remove all unnecessary categories
     categories = categories.iter()
                            .filter(|c| {
-                               !c.get_name().to_ascii_lowercase().contains("index") &&
-                               c.get_downloads().len() != 0
+                               !c.name().to_ascii_lowercase().contains("index") &&
+                               c.downloads().len() != 0
                            })
                            .map(|c| c.clone())
                            .collect();
