@@ -93,10 +93,11 @@ impl Downloader {
         match self.cmd_recv.try_recv() {
             Ok(cmd) => {
                 match &cmd.0 as &str {
+                    "remove" => {
+                        return Err("stopped".to_string());
+                    }
                     "stop" => {
-                        drop(self);
-                        // kill thread
-                        return Err("Thread stopped".to_string());
+                        return Err("stopped".to_string());
                     }
                     _ => {}
                 }

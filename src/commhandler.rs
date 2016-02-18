@@ -1,5 +1,6 @@
 use data::*;
 use std::sync::mpsc::{channel, Sender, Receiver, SendError};
+use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::thread;
@@ -112,17 +113,17 @@ impl CommHandler {
                                 Ok(_) => {}
                                 Err(e) => {
                                     *current_threads.lock().unwrap() -= 1;
+                                    keep_downloading = false;
                                     match &e as &str {
-                                        "finished" => {
-                                            keep_downloading = false;
-                                        }
+                                        "finished" | "stopped" => {}
                                         _ => {
-                                            panic!(e);
+                                            println!("{}", e);
                                         }
                                     }
                                 },
                             }
                         }
+                        drop(downloader);
                     });
                 }
             }
@@ -146,7 +147,9 @@ impl CommHandler {
             self.datacache.clear();
             // send the changes
             if let Err(e) = self.gui_update_send.send(self.pending_changes.to_owned()) {
-                println!("Failed to send gui update message: {}", e);
+                if e.description() != "sending on a closed channel" {
+                    println!("Failed to send gui update message: {}", e);
+                }
             }
             // clear pending changes
             self.pending_changes.clear();
@@ -178,11 +181,13 @@ impl CommHandler {
                 }
             }
             "remove" => {
+                let mut in_jobs = false;
                 let id = cmd.1.unwrap();
                 // remove from jobs if existing
                 for idx in 0..self.jobs.len() {
                     if self.jobs[idx].id() == id {
                         self.jobs.remove(idx);
+                        in_jobs = true;
                         break;
                     }
                 }
@@ -205,7 +210,9 @@ impl CommHandler {
                     }
                 }
                 // broadcast to all threads
-                self.broadcast(cmd).ignore();
+                if !in_jobs {
+                    self.broadcast(cmd).ignore();
+                }
                 // change to unwrap later on
             }
             "stop" => {
