@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::thread;
 use threadpool::ThreadPool;
-use download::*;
+use downloader::*;
 use std::time::Duration;
 use helper::Ignore;
 use gui::update_gui;

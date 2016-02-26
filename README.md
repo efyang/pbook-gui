@@ -16,13 +16,18 @@ This project aims to provide a gui to allow users to select and download files f
         - progress bar ☑
         - ETA ☑
         - speed (use XiB notation) ☑
-        - updating ☐
+        - updating ☑
+        - no lag ☐
+        - right click context menu ☐
+            - pause ☐
+            - open file ☐
+            - stop file ☐
 - parallel downloads ☐
     - thread pool based ☑
     - number of threads changeable while executing ☐
     - pausable ☐
     - low cpu usage ☑
-    - speed should be at max possible ☐
+    - speed should be at max possible ☑
     - Optional - if available, use coroutines
 - logging ☐
     - just print ☑

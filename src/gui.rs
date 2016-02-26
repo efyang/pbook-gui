@@ -16,6 +16,8 @@ use cellrenderers::*;
 use theme::*;
 use constants::{DEFAULT_GTK_CSS_CONFIG, SECONDARY_GTK_CSS_CONFIG};
 
+use time::precise_time_s;
+
 // DownloadUpdate {
 // Message(String),
 // Amount(usize),
@@ -237,6 +239,7 @@ fn update_local() -> Continue {
                 // go through change list and update accordingly
                 // command, optional id, optional index, optional new value
                 // [string, u64, usize, Download]
+                let start_time = precise_time_s();
                 for change in changes.iter() {
                     match &change.0 as &str {
                         "remove" => {
@@ -283,6 +286,7 @@ fn update_local() -> Continue {
                         _ => {}
                     }
                 }
+                //print!("\rUpdate loop took: {}s           ", precise_time_s() - start_time);
             }
         }
     });

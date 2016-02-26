@@ -22,7 +22,7 @@ mod include;
 mod gui;
 mod parse;
 mod commhandler;
-mod download;
+mod downloader;
 mod helper;
 mod gtkdef;
 mod cellrenderers;
