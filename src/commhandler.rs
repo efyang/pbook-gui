@@ -75,13 +75,19 @@ impl CommHandler {
             }
         }
 
-        // handle threadpool message
-        match self.threadpool_progress_recv.try_recv() {
-            Ok(dl_progress) => {
-                self.handle_progress_msg(dl_progress);
+        // handle threadpool messages
+        let mut messages_clear = false;
+        while !messages_clear {
+            match self.threadpool_progress_recv.try_recv() {
+                Ok(dl_progress) => {
+                    self.handle_progress_msg(dl_progress);
+                }
+                Err(_) => {
+                    messages_clear = true;
+                }
             }
-            Err(_) => {}
         }
+        
 
         // start execution of any jobs that exist
         let max_threads = self.max_threads.lock().unwrap().clone();
