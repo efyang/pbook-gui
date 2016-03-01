@@ -141,8 +141,8 @@ impl Download {
         // id is siphash of name + url
         Download {
             id: get_hash_id(name, url),
-            name: name.to_string(),
-            url: url.to_string(),
+            name: name.to_owned(),
+            url: url.to_owned(),
             enabled: false,
             download_info: None,
         }
@@ -215,7 +215,7 @@ impl Download {
             download_info.increment_progress(increment);
             Ok(())
         } else {
-            Err("Progress cannot be incremented because it is not downloading.".to_string())
+            Err("Progress cannot be incremented because it is not downloading.".to_owned())
         }
     }
 }
@@ -288,12 +288,17 @@ impl DownloadInfo {
             bytes_left = self.total - self.progress;
         }
         let speed = self.speed();
-        let eta = (bytes_left as f32 / speed) as usize;
+        let eta = bytes_left as f32 / speed;
         let streta;
-        if maximum(eta, i32::MAX as usize) == eta {
-            streta = "∞".to_string();
+        if maximum(eta, i32::MAX as f32) == eta {
+            streta = "∞".to_owned();
+        } else if self.progress == self.total {
+            streta = "Done.".to_owned();
         } else {
-            streta = format!("{}", time::Duration::seconds(eta as i64));
+            let dur = time::Duration::seconds(eta as i64);
+            println!("eta: {} {} {} {} {}", dur.num_weeks(), dur.num_days(), dur.num_hours(), dur.num_minutes(), dur.num_seconds());
+            
+            streta = format!("{}", dur);
         }
         streta
     }

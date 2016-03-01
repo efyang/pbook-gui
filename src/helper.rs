@@ -1,5 +1,9 @@
 use std::iter;
 
+pub fn make_string_if_nonzero(n: i64, id: &'static str) -> String {
+
+}
+
 pub trait Ignore {
     fn ignore(&self);
 }

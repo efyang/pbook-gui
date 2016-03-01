@@ -30,10 +30,10 @@ impl Downloader {
                cmd_recv: Receiver<TpoolCmdMsg>,
                progress_send: Sender<TpoolProgressMsg>)
                -> Downloader {
-        let dlname = download.name().to_string();
+        let dlname = download.name().to_owned();
         Downloader {
             name: dlname.clone(),
-            url: download.url().to_string(),
+            url: download.url().to_owned(),
             id: download.id(),
             cmd_recv: cmd_recv,
             progress_send: progress_send,
@@ -94,10 +94,10 @@ impl Downloader {
             Ok(cmd) => {
                 match &cmd.0 as &str {
                     "remove" => {
-                        return Err("stopped".to_string());
+                        return Err("stopped".to_owned());
                     }
                     "stop" => {
-                        return Err("stopped".to_string());
+                        return Err("stopped".to_owned());
                     }
                     _ => {}
                 }
@@ -165,7 +165,7 @@ impl Downloader {
                 match copy(self.filepath.clone(), newpath) {
                     Ok(_) => {
                         self.filepath = newpath.to_path_buf();
-                        let finish_msg = "File copied successfully".to_string();
+                        let finish_msg = "File copied successfully".to_owned();
                         self.progress_send
                             .send((self.id, DownloadUpdate::Message(finish_msg)))
                             .expect("Failed to send copy finish");

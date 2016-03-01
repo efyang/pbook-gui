@@ -65,7 +65,7 @@ pub fn main() {
             .join(arch)
             .join("7za.exe");
         // lib file doesnt exist or checksum is incorrect -> redownload
-        if !(dlout.exists() && &file_sha3_hash(&dlout).unwrap_or("".to_string()) == LIB_CHECKSUM) {
+        if !(dlout.exists() && &file_sha3_hash(&dlout).unwrap_or("".to_owned()) == LIB_CHECKSUM) {
             let mut outfile = BufWriter::new(File::create(dlout.clone())
                                              .expect("Failed to make gtk.7z file"));
             let stream = try_until_stream(download_link, 5);
@@ -80,7 +80,7 @@ pub fn main() {
         let lib_path = deps.join(format!("lib{}", bitsize));
         if !lib_path.exists() {
             Command::new(zpath.clone())
-                .args(&["x", dlout.to_str().unwrap(), &("-o".to_string() + deps.to_str().unwrap()), "-y"])
+                .args(&["x", dlout.to_str().unwrap(), &("-o".to_owned() + deps.to_str().unwrap()), "-y"])
                 .output()
                 .unwrap_or_else(|e| panic!("Failed to execute process {}", e));
         }

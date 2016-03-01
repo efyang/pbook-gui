@@ -409,7 +409,7 @@ fn download_to_values(dl: &Download) -> Option<(u64, (String, String, f32, Strin
         &Some(ref download_info) => {
             let dlid = dl.id();
             // shorten needed until ellipsize is implemented for CellRendererText
-            let name = dl.name().to_string().shorten(50);
+            let name = dl.name().to_owned().shorten(50);
             let size = (download_info.total() as f32).convert_to_byte_units(0);
             let percent = download_info.percentage();
             // actual gtk amount is out of 100.0

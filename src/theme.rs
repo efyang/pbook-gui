@@ -22,7 +22,7 @@ pub fn setup_theme(current_working_dir: &Path,
                         Err(_) => {
                             println!("Could not read theme.txt file to string, defaulting to Arc \
                                       theme.");
-                            gtk_theme = "arc".to_string();
+                            gtk_theme = "arc".to_owned();
                         }
                     }
                 }
@@ -34,13 +34,13 @@ pub fn setup_theme(current_working_dir: &Path,
                                 Err(_) => {
                                     println!("Could not read theme.txt file to string, \
                                               defaulting to Arc theme.");
-                                    gtk_theme = "arc".to_string();
+                                    gtk_theme = "arc".to_owned();
                                 }
                             }
                         }
                         Err(_) => {
                             println!("No theme.txt file found, defaulting to Arc theme.");
-                            gtk_theme = "arc".to_string();
+                            gtk_theme = "arc".to_owned();
                         }
                     }
                 }
@@ -91,13 +91,13 @@ fn get_gtk_css(config_path: &Path, gtk_theme_path: &Path) -> String {
                 Ok(_) => {}
                 Err(_) => {
                     println!("Could not read gtk config to string, going with defaults");
-                    gtk_config = "".to_string();
+                    gtk_config = "".to_owned();
                 }
             }
         }
         Err(_) => {
             println!("Could not open gtk config");
-            gtk_config = "".to_string();
+            gtk_config = "".to_owned();
         }
     }
     [gtk_config, make_import_css(gtk_theme_path)].join("\n")
@@ -119,7 +119,7 @@ fn get_theme_dir(cwd: &Path) -> Result<PathBuf, String> {
     } else if second_choice.exists() {
         Ok(second_choice)
     } else {
-        Err("Failed to get theme dir".to_string())
+        Err("Failed to get theme dir".to_owned())
     }
 }
 

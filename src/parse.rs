@@ -4,17 +4,17 @@ use std::ascii::AsciiExt;
 // pub fn parse(data: &str) -> Vec<Vec<Download>> {
 pub fn parse(data: &str) -> Vec<Category> {
     let padded_data = blanks_to_newlines(data.split('\n')
-                                             .map(|l| l.trim().to_string())
+                                             .map(|l| l.trim().to_owned())
                                              .collect::<Vec<String>>());
     let category_data = padded_data.split("\n")
-                                   .map(|s| s.to_string())
+                                   .map(|s| s.to_owned())
                                    .collect::<Vec<String>>();
     get_categories(remove_blanks(category_data), '#')
 }
 
 pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Category> {
     let mut categories: Vec<Category> = Vec::with_capacity(vec_data.len());
-    let mut category_name: String = "Index".to_string();
+    let mut category_name: String = "Index".to_owned();
     let mut category: Category = Category::new(category_name, vec![]);
     for entry in vec_data {
         let title_head = [title_identifier; 3]
@@ -54,8 +54,8 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
 fn blanks_to_newlines(vec_data: Vec<String>) -> String {
     vec_data.iter()
             .map(|s| {
-                if s == &"".to_string() {
-                    "\n".to_string()
+                if s == &"".to_owned() {
+                    "\n".to_owned()
                 } else {
                     (s.clone() + "\n")
                 }
@@ -66,7 +66,7 @@ fn blanks_to_newlines(vec_data: Vec<String>) -> String {
 
 fn remove_blanks(vec_data: Vec<String>) -> Vec<String> {
     vec_data.iter()
-            .filter(|&s| s != &"".to_string())
+            .filter(|&s| s != &"".to_owned())
             .map(|s| s.clone())
             .collect::<Vec<String>>()
 }
@@ -98,7 +98,7 @@ pub fn get_item_info(raw_item: String) -> Option<(String, String)> {
     }
     title = &raw_item[title_start..title_end];
 
-    if let Some(end) = (&raw_item[(title_end + 2)..].to_string()).find(")") {
+    if let Some(end) = (&raw_item[(title_end + 2)..].to_owned()).find(")") {
         url_end = end;
     } else {
         return None;
@@ -106,5 +106,5 @@ pub fn get_item_info(raw_item: String) -> Option<(String, String)> {
 
     url = &raw_item[(title_end + 2)..][..url_end];
 
-    Some((title.to_string(), url.to_string()))
+    Some((title.to_owned(), url.to_owned()))
 }
