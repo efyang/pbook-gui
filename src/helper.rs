@@ -1,7 +1,11 @@
 use std::iter;
 
 pub fn make_string_if_nonzero(n: i64, id: &'static str) -> String {
-
+    if n != 0 {
+        return format!("{}{} ", n, id);
+    } else {
+        return "".to_owned();
+    }
 }
 
 pub trait Ignore {

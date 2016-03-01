@@ -5,7 +5,7 @@ use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
 use time::precise_time_s;
 use time;
-use helper::{minimum, maximum};
+use helper::{minimum, maximum, make_string_if_nonzero};
 use constants::DOWNLOAD_SPEED_UPDATE_TIME;
 use std::i32;
 
@@ -47,7 +47,7 @@ impl Category {
             downloads: downloads,
         }
     }
-    
+
     // Getter functions
 
     pub fn name(&self) -> &str {
@@ -71,11 +71,11 @@ impl Category {
     }
 
     // Setter functions
-    
+
     pub fn add_download(&mut self, download: Download) {
         self.downloads.push(download);
     }
-    
+
     pub fn begin_download(&mut self, download_id: &u64) -> Result<(), String> {
         let mut exists = false;
         for dl in self.downloads.iter_mut() {
@@ -91,7 +91,7 @@ impl Category {
             Err(format!("No such download id {} exists.", download_id))
         }
     }
-   
+
     pub fn begin_downloading_all(&mut self) {
         for download in self.downloads.iter_mut() {
             download.start_download();
@@ -105,7 +105,7 @@ impl Category {
     }
 
     // Incrementatal functions
-    
+
     pub fn increment_download_progress(&mut self,
                                        download_id: &u64,
                                        increment: usize)
@@ -133,7 +133,7 @@ pub struct Download {
     url: String,
     enabled: bool,
     download_info: Option<DownloadInfo>, /* optional depending on whether
-                                   * its currently being downloaded */
+                                          * its currently being downloaded */
 }
 
 impl Download {
@@ -179,7 +179,7 @@ impl Download {
     }
 
     // Setter functions
-    
+
     pub fn enable(&mut self) {
         self.enabled = true;
     }
@@ -207,7 +207,7 @@ impl Download {
     pub fn stop_download(&mut self) {
         self.download_info = None;
     }
-    
+
     // Incremental functions
 
     pub fn increment_progress(&mut self, increment: usize) -> Result<(), String> {
@@ -296,15 +296,18 @@ impl DownloadInfo {
             streta = "Done.".to_owned();
         } else {
             let dur = time::Duration::seconds(eta as i64);
-            println!("eta: {} {} {} {} {}", dur.num_weeks(), dur.num_days(), dur.num_hours(), dur.num_minutes(), dur.num_seconds());
-            
-            streta = format!("{}", dur);
+            streta = format!("{}{}{}{}{}",
+                             make_string_if_nonzero(dur.num_weeks(), "W"),
+                             make_string_if_nonzero(dur.num_days(), "D"),
+                             make_string_if_nonzero(dur.num_hours(), "H"),
+                             make_string_if_nonzero(dur.num_minutes(), "M"),
+                             make_string_if_nonzero(dur.num_seconds(), "S"));
         }
         streta
     }
 
     // Setters
-    
+
     pub fn set_total(&mut self, total: usize) {
         self.total = total;
     }
