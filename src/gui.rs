@@ -241,18 +241,16 @@ fn update_local() -> Continue {
                 // [string, u64, usize, Download]
                 let start_time = precise_time_s();
                 for change in changes.iter() {
-                    match &change.0 as &str {
-                        "remove" => {
+                    match change {
+                        Remove(idx) => {
                             // remove index
-                            let idx = change.2.unwrap();
                             let mut iter = download_store.iter_nth_child(None, idx as i32)
                                                          .expect("no such iter");
                             download_store.remove(&mut iter);
                             DOWNLOADS.lock().unwrap().remove(idx);
                         }
-                        "add" => {
-                            println!("{:?}", change);
-                            let mut download = change.clone().3.unwrap();
+                        Add(download) => {
+                            let mut download = download.clone();
                             download.start_download();
                             download.set_enable_state(true);
                             // add download
@@ -260,23 +258,18 @@ fn update_local() -> Continue {
                             download_store.add_download(values);
                             DOWNLOADS.lock().unwrap().push(download);
                         }
-                        "set" => {
-                            let idx = change.2.unwrap();
+                        Set(idx, download) => {
                             let iter = download_store.iter_nth_child(None, idx as i32)
                                                      .expect("no such iter");
-                            let values = download_to_values(&change.clone().3.unwrap()).unwrap().1;
+                            let values = download_to_values(&download).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
-                        "finished" => {
-                            let idx = change.2.unwrap();
+                        Finished(idx) => {
                             let iter = download_store.iter_nth_child(None, idx as i32)
                                                      .expect("no such iter");
-                            download_store.set_value(&iter, 2, &100.0f32.to_value());
-                            download_store.set_value(&iter, 3, &"0 B/s".to_value());
-                            download_store.set_value(&iter, 4, &"Done.".to_value());
                         }
-                        "panicked" => {
-                            if let Some(id) = change.1 {
+                        Panicked(oid) => {
+                            if let Some(id) = oid {
                                 // download specific fail
                             } else {
                                 // commhandler fail

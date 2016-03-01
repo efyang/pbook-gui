@@ -29,7 +29,17 @@ pub enum TpoolCmdMsg {
 
 pub type TpoolProgressMsg = (u64, DownloadUpdate);
 pub type GuiCmd = (String, Option<u64>, Option<PathBuf>);
-pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
+
+pub enum GuiChange {
+    Remove(usize), // idx
+    Add(Download), // download
+    Set(usize, Download), // idx, download
+    Finished(usize), // idx
+    Panicked(Option<u64>), // id
+}
+
+//pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
+pub type GuiUpdateMsg = Vec<GuiChange>;
 
 pub trait ToDownloads {
     fn to_downloads(&self) -> Vec<Download>;
