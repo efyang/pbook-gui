@@ -3,7 +3,7 @@ use gtk;
 use gtk::prelude::*;
 use gtk::{Orientation, Value};
 use std::env;
-use std::sync::mpsc::{Sender, Receiver};
+use std::sync::mpsc::{Sender, Receiver, SendError};
 use std::sync::Mutex;
 use std::collections::HashMap;
 use std::cell::RefCell;
@@ -196,7 +196,7 @@ pub fn gui(data: &mut Vec<Category>,
     {
         let command_send_channel = command_send_channel.clone();
         window.connect_delete_event(move |_, _| {
-            match command_send_channel.clone().send_gui_cmd("stop".to_owned(), None, None) {
+            match command_send_channel.clone().send(GuiCmdMsg::Stop) {
                 Ok(_) => {}
                 Err(e) => println!("{:?}", e),
             }
@@ -303,42 +303,19 @@ pub fn update_gui() {
 fn update_download(sender: Sender<GuiCmdMsg>,
                    download: Download,
                    out_path: PathBuf)
-                   -> Result<(), String> {
+                   -> Result<(), SendError<GuiCmdMsg>> {
     let id = download.id();
-    let message;
     for dl in DOWNLOADS.lock().unwrap().iter() {
         if dl.id() == id {
             if dl.enabled() {
-                message = "remove";
+                return sender.send(GuiCmdMsg::Remove(id));
             } else {
-                message = "add";
+                return sender.send(GuiCmdMsg::Add(id, out_path));
             }
-            return sender.send_gui_cmd(message.to_owned(), Some(id), Some(out_path));
         }
     }
     // not found in current list
-    return sender.send_gui_cmd("add".to_owned(), Some(id), Some(out_path));
-}
-
-trait CmdSend {
-    fn send_gui_cmd(&self,
-                    cmd: String,
-                    id: Option<u64>,
-                    path: Option<PathBuf>)
-                    -> Result<(), String>;
-}
-
-impl CmdSend for Sender<GuiCmdMsg> {
-    fn send_gui_cmd(&self,
-                    cmd: String,
-                    id: Option<u64>,
-                    path: Option<PathBuf>)
-                    -> Result<(), String> {
-        match self.send((cmd, id, path)) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!("{}", e)),
-        }
-    }
+    return sender.send(GuiCmdMsg::Add(id, out_path));
 }
 
 trait AddCategories {

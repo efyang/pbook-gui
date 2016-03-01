@@ -15,9 +15,20 @@ pub enum DownloadUpdate {
     SetSize(usize),
 }
 
+pub enum GuiCmdMsg {
+    Add(u64, PathBuf),
+    Remove(u64),
+    Stop,
+}
+
+#[derive(Clone)]
+pub enum TpoolCmdMsg {
+    Remove(u64),
+    Stop,
+}
+
 pub type TpoolProgressMsg = (u64, DownloadUpdate);
-pub type GuiCmdMsg = (String, Option<u64>, Option<PathBuf>);
-pub type TpoolCmdMsg = GuiCmdMsg;
+pub type GuiCmd = (String, Option<u64>, Option<PathBuf>);
 pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
 
 pub trait ToDownloads {

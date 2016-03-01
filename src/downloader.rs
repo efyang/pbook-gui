@@ -90,19 +90,17 @@ impl Downloader {
 
     pub fn update(&mut self) -> Result<(), String> {
         // check messages
-        match self.cmd_recv.try_recv() {
-            Ok(cmd) => {
-                match &cmd.0 as &str {
-                    "remove" => {
+        if let Ok(cmd) = self.cmd_recv.try_recv() {
+            match cmd {
+                TpoolCmdMsg::Remove(id) => {
+                    if self.id == id {
                         return Err("stopped".to_owned());
                     }
-                    "stop" => {
-                        return Err("stopped".to_owned());
-                    }
-                    _ => {}
+                }
+                TpoolCmdMsg::Stop => {
+                    return Err("stopped".to_owned());
                 }
             }
-            Err(_) => {}
         }
         // download more bytes
         if let Some(ref mut outfile) = self.outfile {
