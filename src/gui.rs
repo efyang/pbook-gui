@@ -251,6 +251,7 @@ fn update_local() -> Continue {
                             DOWNLOADS.lock().unwrap().remove(idx);
                         }
                         "add" => {
+                            println!("{:?}", change);
                             let mut download = change.clone().3.unwrap();
                             download.start_download();
                             download.set_enable_state(true);

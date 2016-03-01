@@ -209,7 +209,7 @@ impl CommHandler {
                 for idx in 0..self.liststore_ids.len() {
                     if self.liststore_ids[idx] == id {
                         self.liststore_ids.remove(idx);
-                        self.pending_changes.push(("add".to_owned(), None, Some(idx), None));
+                        self.pending_changes.push(("remove".to_owned(), None, Some(idx), None));
                         break;
                     }
                 }
