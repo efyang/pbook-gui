@@ -39,7 +39,7 @@ pub enum GuiChange {
     Panicked(Option<u64>), // id
 }
 
-//pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
+// pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
 pub type GuiUpdateMsg = Vec<GuiChange>;
 
 pub trait ToDownloads {
@@ -131,15 +131,15 @@ impl Category {
     pub fn increment_download_progress(&mut self,
                                        download_id: &u64,
                                        increment: usize)
-        -> Result<(), String> {
-            for dl in self.downloads.iter_mut() {
-                if &dl.id == download_id {
-                    return dl.increment_progress(increment);
-                }
+                                       -> Result<(), String> {
+        for dl in self.downloads.iter_mut() {
+            if &dl.id == download_id {
+                return dl.increment_progress(increment);
             }
-            // default if not found
-            Err(format!("No such download id {} exists.", download_id))
         }
+        // default if not found
+        Err(format!("No such download id {} exists.", download_id))
+    }
 }
 
 pub fn get_hash_id(name: &str, url: &str) -> u64 {
@@ -357,5 +357,4 @@ impl DownloadInfo {
             self.recent_progress += increment;
         }
     }
-
 }
