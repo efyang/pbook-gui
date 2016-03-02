@@ -90,3 +90,11 @@ pub fn round_to_places(n: f32, places: usize) -> f32 {
     let div = (format!("1{}", &"0".repeat(places))).parse::<f32>().unwrap();
     (n * div).round() / div
 }
+
+pub fn name_to_fname(s: &str) -> String {
+    spaces_to_underscores(s) + ".pdf"
+}
+
+pub fn spaces_to_underscores(s: &str) -> String {
+    s.replace(" ", "_")
+}

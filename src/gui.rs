@@ -122,6 +122,7 @@ pub fn gui(data: &mut Vec<Category>,
             // First send message, then update visually - more informative
             let indices = path.get_indices();
             let ref category = data[indices[0] as usize];
+            let category_dir = download_dir.join(name_to_fname(category.name()));
             // Update data and the view
             let is_category;
             match path.get_depth() {
@@ -131,7 +132,7 @@ pub fn gui(data: &mut Vec<Category>,
                         // NOTE: PLACEHOLDER PATHS
                         if let Err(error) = update_download(command_send_channel.clone(),
                                                             download.to_owned(),
-                                                            download_dir.to_path_buf()) {
+                                                            category_dir.clone()) {
                             println!("{}", error);
                         }
                     }
@@ -141,7 +142,7 @@ pub fn gui(data: &mut Vec<Category>,
                     let download = category.get_download_at_idx(indices[1] as usize);
                     if let Err(error) = update_download(command_send_channel.clone(),
                                                         download.to_owned(),
-                                                        download_dir.to_path_buf()) {
+                                                        category_dir) {
                         println!("{}", error);
                     }
                     is_category = false;

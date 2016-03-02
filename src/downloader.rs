@@ -8,6 +8,7 @@ use hyper::client::response::Response;
 use hyper::header::ContentLength;
 use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
+use helper::name_to_fname;
 
 pub struct Downloader {
     name: String,
@@ -202,10 +203,3 @@ fn make_chdir_error(errorstring: Error, kind: &str) -> String {
             errorstring)
 }
 
-fn name_to_fname(s: &str) -> String {
-    spaces_to_underscores(s) + ".pdf"
-}
-
-fn spaces_to_underscores(s: &str) -> String {
-    s.replace(" ", "_")
-}
