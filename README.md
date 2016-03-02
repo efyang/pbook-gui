@@ -1,14 +1,15 @@
 # pbook-gui
 
-This project aims to provide a gui to allow users to select and download files from the [free-programming-books](https://github.com/vhf/free-programming-books) repository (currently only supporting the english version) in parallel.
+This project aims to provide a gui to allow users to select and download files from the [free-programming-books](https://github.com/vhf/free-programming-books) repository (currently only supporting the english version) in parallel. Ideally, the parser can be generalized to accept or try to accept other similar pages and give users the ability to download lists of files that they choose while making the most of their connection.
 
 ### Features (very much WIP)
 - parser for github page ☑
     - page -> list of categories of downloads ☑
-- gtk gui ☐
+- gtk gui ☑
     - adequate directory structure ☑
     - fairly easily themable ☑
     - swappable themes while in gui ☐
+    - button to enable all ☐
     - categories on side ☑
     - list of downloads ☑
         - name ☑
@@ -17,12 +18,12 @@ This project aims to provide a gui to allow users to select and download files f
         - ETA ☑
         - speed (use XiB notation) ☑
         - updating ☑
-        - no lag ☐
+        - no lag (mostly) ☑
         - right click context menu ☐
             - pause ☐
             - open file ☐
             - stop file ☐
-- parallel downloads ☐
+- parallel downloads ☑
     - thread pool based ☑
     - number of threads changeable while executing ☐
     - pausable ☐
@@ -59,34 +60,10 @@ becomes |             +----------+--^----+    |                  |
      +-----+   +------------------+                +---------------+
 ```
 
-* All channels should use normal std builtin mpsc channels unless they become a bottleneck, otherwise use comm::spsc
 * ~~Thread number unchangeable atm~~ Functionality added with [this PR](https://github.com/frewsxcv/rust-threadpool/pull/17)
 
 ##### GUI
-* Tree view for representation of the categories
-* RadioBox of downloads
-    * Right click on each item -> Context Menu with pause/resume/disable
-
-<!--  ☐
- ☑-->
-<!--
-* enabled enum ->
-	* Enabled(progressamnt) -> on download check if progressamnt is 100 -> do not redownload
-	* Disabled
-* Have a download struct
-	* title
-	* url
-	* enabled enum
-* Main gui thread:
-	* HashMap<threadid, download struct> -> shared between all threads via arc<mutex>
-	* Download progress updater updates the main hashmap
-	* Gui thread just reads the hashmap and renders accordingly
-* Ideally have main gui be easily modifiable for uses other than pdfs
-	* Split up window sections/tabs
-		1. pdf chooser/browser
-		2. ongoing downloads -> should easy be able to be repurposed for similar tasks
-* Threadpool for downloads -> main gui thread distributes work
-	* max 4 parallel downloads/maximum os threads -> whichever is smaller
-	* threadpool is Hashmap<thread, bool> (bool is whether working or not)
-	* Check for open threads on each gui update loop
--->
+* Enable 
+* Tree view for representation of the categories ☑
+* RadioBox of downloads ☑
+    * Right click on each item -> Context Menu with pause/resume/disable ☐
