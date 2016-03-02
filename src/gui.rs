@@ -242,14 +242,14 @@ fn update_local() -> Continue {
                 let start_time = precise_time_s();
                 for change in changes.iter() {
                     match change {
-                        Remove(idx) => {
+                        &GuiChange::Remove(idx) => {
                             // remove index
                             let mut iter = download_store.iter_nth_child(None, idx as i32)
                                                          .expect("no such iter");
                             download_store.remove(&mut iter);
                             DOWNLOADS.lock().unwrap().remove(idx);
                         }
-                        Add(download) => {
+                        &GuiChange::Add(ref download) => {
                             let mut download = download.clone();
                             download.start_download();
                             download.set_enable_state(true);
@@ -258,17 +258,17 @@ fn update_local() -> Continue {
                             download_store.add_download(values);
                             DOWNLOADS.lock().unwrap().push(download);
                         }
-                        Set(idx, download) => {
+                        &GuiChange::Set(idx, ref download) => {
                             let iter = download_store.iter_nth_child(None, idx as i32)
                                                      .expect("no such iter");
                             let values = download_to_values(&download).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
-                        Finished(idx) => {
+                        &GuiChange::Finished(idx) => {
                             let iter = download_store.iter_nth_child(None, idx as i32)
                                                      .expect("no such iter");
                         }
-                        Panicked(oid) => {
+                        &GuiChange::Panicked(oid) => {
                             if let Some(id) = oid {
                                 // download specific fail
                             } else {
@@ -277,10 +277,8 @@ fn update_local() -> Continue {
                                 panic!("Communication handler panicked");
                             }
                         }
-                        _ => {}
                     }
                 }
-                //print!("\rUpdate loop took: {}s           ", precise_time_s() - start_time);
             }
         }
     });

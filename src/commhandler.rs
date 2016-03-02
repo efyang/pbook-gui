@@ -78,6 +78,9 @@ impl CommHandler {
         // handle threadpool messages
         let mut messages_clear = false;
         while !messages_clear {
+            if precise_time_ns() >= self.next_gui_update_t {
+                messages_clear = true;
+            }
             match self.threadpool_progress_recv.try_recv() {
                 Ok(dl_progress) => {
                     self.handle_progress_msg(dl_progress);
@@ -142,10 +145,7 @@ impl CommHandler {
                     download.increment_progress(*self.datacache.get(&id).unwrap_or(&0))
                             .unwrap();
                     // add to pending changes
-                    self.pending_changes.push(("set".to_owned(),
-                                               Some(id),
-                                               Some(idx),
-                                               Some(download.to_owned())));
+                    self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
                     idx += 1;
                 }
             }
@@ -175,7 +175,7 @@ impl CommHandler {
                 self.jobs.push(download.clone());
                 self.liststore_ids.push(id);
                 // add to pending changes
-                self.pending_changes.push(("add".to_owned(), None, None, Some(download.clone())));
+                self.pending_changes.push(GuiChange::Add(download.to_owned()));
                 // start in main data model
                 for item in self.data.iter_mut() {
                     if item.id() == id {
@@ -209,7 +209,7 @@ impl CommHandler {
                 for idx in 0..self.liststore_ids.len() {
                     if self.liststore_ids[idx] == id {
                         self.liststore_ids.remove(idx);
-                        self.pending_changes.push(("remove".to_owned(), None, Some(idx), None));
+                        self.pending_changes.push(GuiChange::Remove(idx));
                         break;
                     }
                 }
@@ -263,7 +263,7 @@ impl CommHandler {
                             }
                         }
                         // send message to gui
-                        self.pending_changes.push((message, Some(dlid), Some(idx), None));
+                        self.pending_changes.push(GuiChange::Finished(idx));
                     }
                     _ => {}
                 }

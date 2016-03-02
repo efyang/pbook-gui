@@ -7,7 +7,7 @@ use time::precise_time_s;
 use time;
 use helper::{minimum, maximum, make_string_if_nonzero};
 use constants::DOWNLOAD_SPEED_UPDATE_TIME;
-use std::i32;
+use std::{i32, i64};
 
 pub enum DownloadUpdate {
     Message(String),
@@ -30,6 +30,7 @@ pub enum TpoolCmdMsg {
 pub type TpoolProgressMsg = (u64, DownloadUpdate);
 pub type GuiCmd = (String, Option<u64>, Option<PathBuf>);
 
+#[derive(Clone)]
 pub enum GuiChange {
     Remove(usize), // idx
     Add(Download), // download
@@ -130,15 +131,15 @@ impl Category {
     pub fn increment_download_progress(&mut self,
                                        download_id: &u64,
                                        increment: usize)
-                                       -> Result<(), String> {
-        for dl in self.downloads.iter_mut() {
-            if &dl.id == download_id {
-                return dl.increment_progress(increment);
+        -> Result<(), String> {
+            for dl in self.downloads.iter_mut() {
+                if &dl.id == download_id {
+                    return dl.increment_progress(increment);
+                }
             }
+            // default if not found
+            Err(format!("No such download id {} exists.", download_id))
         }
-        // default if not found
-        Err(format!("No such download id {} exists.", download_id))
-    }
 }
 
 pub fn get_hash_id(name: &str, url: &str) -> u64 {
@@ -311,18 +312,20 @@ impl DownloadInfo {
         let speed = self.speed();
         let eta = bytes_left as f32 / speed;
         let streta;
-        if maximum(eta, i32::MAX as f32) == eta {
+        if self.progress == 0 && self.total == 0 {
+            streta = "N/A".to_owned();
+        } else if maximum(eta, i32::MAX as f32) == eta || speed == 0.0 {
             streta = "∞".to_owned();
         } else if self.progress == self.total {
             streta = "Done.".to_owned();
         } else {
-            let dur = time::Duration::seconds(eta as i64);
-            streta = format!("{}{}{}{}{}",
-                             make_string_if_nonzero(dur.num_weeks(), "W"),
-                             make_string_if_nonzero(dur.num_days(), "D"),
-                             make_string_if_nonzero(dur.num_hours(), "H"),
-                             make_string_if_nonzero(dur.num_minutes(), "M"),
-                             make_string_if_nonzero(dur.num_seconds(), "S"));
+            let dur = time::Duration::seconds(maximum(minimum(eta as i64, i64::MAX), 0));
+            streta = format!("{}{}{}{}{}s",
+                             make_string_if_nonzero(dur.num_weeks(), "w"),
+                             make_string_if_nonzero(dur.num_days(), "d"),
+                             make_string_if_nonzero(dur.num_hours(), "h"),
+                             make_string_if_nonzero(dur.num_minutes(), "m"),
+                             dur.num_seconds());
         }
         streta
     }
@@ -344,7 +347,7 @@ impl DownloadInfo {
         let timenow = precise_time_s();
         if timenow >= self.recent_progress_clear_time {
             self.previous_progress = self.recent_progress;
-            if self.progress == self.total {
+            if self.progress == self.total || increment == 0 {
                 self.recent_progress /= 2;
             } else {
                 self.recent_progress = (self.recent_progress + self.previous_progress) / 2;
