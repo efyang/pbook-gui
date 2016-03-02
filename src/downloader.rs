@@ -2,9 +2,7 @@ use std::sync::mpsc::{Sender, Receiver};
 use std::io::prelude::*;
 use std::io::{Error, BufWriter, ErrorKind};
 use std::fs::{File, copy};
-use std::fs;
 use std::time::Duration;
-use std::env::current_exe;
 use hyper::client::Client;
 use hyper::client::response::Response;
 use hyper::header::ContentLength;
@@ -137,13 +135,15 @@ impl Downloader {
 
         Ok(())
     }
-
+    
+    #[allow(dead_code)]
     fn send_message(&self, message: String) {
         self.progress_send
             .send((self.id, DownloadUpdate::Message(message)))
             .expect("Failed to send message");
     }
-
+    
+    #[allow(dead_code)]
     fn change_path(&mut self, newpath: &Path) {
         if newpath != self.filepath {
             // preexisting outfile
@@ -170,6 +170,11 @@ impl Downloader {
                     }
                     Err(e) => {
                         let error_msg = make_chdir_error(e, "copy");
+                        self.progress_send
+                            .send((self.id, DownloadUpdate::Message(error_msg)))
+                            .expect("Failed to send error");
+                        return;
+
                     }
                 }
             } else {

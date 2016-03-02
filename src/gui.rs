@@ -1,7 +1,6 @@
 use data::*;
 use gtk;
 use gtk::prelude::*;
-use gtk::{Orientation, Value};
 use std::env;
 use std::sync::mpsc::{Sender, Receiver, SendError};
 use std::sync::Mutex;
@@ -10,22 +9,10 @@ use std::cell::RefCell;
 use std::fs;
 use glib;
 use glib::types::Type;
-use glib::translate::ToGlibPtr;
 use helper::*;
 use cellrenderers::*;
 use theme::*;
 use constants::{DEFAULT_GTK_CSS_CONFIG, SECONDARY_GTK_CSS_CONFIG};
-
-use time::precise_time_s;
-
-// DownloadUpdate {
-// Message(String),
-// Amount(usize),
-// }
-
-// TpoolProgressMsg = (u64, DownloadUpdate);
-// GuiCmdMsg = (String, Option<u64>);
-// TpoolCmdMsg = GuiCmdMsg;
 
 pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<GuiUpdateMsg>,
@@ -239,7 +226,6 @@ fn update_local() -> Continue {
                 // go through change list and update accordingly
                 // command, optional id, optional index, optional new value
                 // [string, u64, usize, Download]
-                let start_time = precise_time_s();
                 for change in changes.iter() {
                     match change {
                         &GuiChange::Remove(idx) => {
@@ -263,10 +249,6 @@ fn update_local() -> Continue {
                                                      .expect("no such iter");
                             let values = download_to_values(&download).unwrap().1;
                             download_store.set_download(&iter, values);
-                        }
-                        &GuiChange::Finished(idx) => {
-                            let iter = download_store.iter_nth_child(None, idx as i32)
-                                                     .expect("no such iter");
                         }
                         &GuiChange::Panicked(oid) => {
                             if let Some(id) = oid {

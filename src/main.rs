@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_imports, unused_attributes, unused_variables)]
-// #![feature(convert)]
 extern crate hyper;
 extern crate gtk;
 extern crate gdk;
@@ -12,10 +10,9 @@ extern crate libc;
 #[macro_use]
 extern crate lazy_static;
 
-use std::env;
 use std::thread;
 use std::time::Duration;
-use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::mpsc::channel;
 
 mod data;
 mod include;

@@ -1,5 +1,3 @@
-use hyper::client::*;
-use hyper::header::ContentLength;
 use std::time::Duration;
 use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
@@ -31,12 +29,12 @@ pub type TpoolProgressMsg = (u64, DownloadUpdate);
 pub type GuiCmd = (String, Option<u64>, Option<PathBuf>);
 
 #[derive(Clone)]
+#[allow(dead_code)]
 pub enum GuiChange {
     Remove(usize), // idx
     Add(Download), // download
     Set(usize, Download), // idx, download
-    Finished(usize), // idx
-    Panicked(Option<u64>), // id
+    Panicked(Option<u64>), // id -- work on this
 }
 
 // pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
@@ -80,9 +78,9 @@ impl Category {
         &self.downloads
     }
 
-    pub fn ids(&self) -> Vec<u64> {
-        self.downloads.iter().map(|dl| dl.id()).collect::<Vec<u64>>()
-    }
+    // pub fn ids(&self) -> Vec<u64> {
+    // self.downloads.iter().map(|dl| dl.id()).collect::<Vec<u64>>()
+    // }
 
     pub fn get_download_at_idx(&self, idx: usize) -> &Download {
         &self.downloads[idx]
@@ -96,49 +94,6 @@ impl Category {
 
     pub fn add_download(&mut self, download: Download) {
         self.downloads.push(download);
-    }
-
-    pub fn begin_download(&mut self, download_id: &u64) -> Result<(), String> {
-        let mut exists = false;
-        for dl in self.downloads.iter_mut() {
-            if &dl.id == download_id {
-                dl.start_download();
-                exists = true;
-                break;
-            }
-        }
-        if exists {
-            Ok(())
-        } else {
-            Err(format!("No such download id {} exists.", download_id))
-        }
-    }
-
-    pub fn begin_downloading_all(&mut self) {
-        for download in self.downloads.iter_mut() {
-            download.start_download();
-        }
-    }
-
-    pub fn set_enable_state_all(&mut self, enable_state: bool) {
-        for dl in self.downloads.iter_mut() {
-            dl.set_enable_state(enable_state);
-        }
-    }
-
-    // Incrementatal functions
-
-    pub fn increment_download_progress(&mut self,
-                                       download_id: &u64,
-                                       increment: usize)
-                                       -> Result<(), String> {
-        for dl in self.downloads.iter_mut() {
-            if &dl.id == download_id {
-                return dl.increment_progress(increment);
-            }
-        }
-        // default if not found
-        Err(format!("No such download id {} exists.", download_id))
     }
 }
 
@@ -202,10 +157,6 @@ impl Download {
 
     // Setter functions
 
-    pub fn enable(&mut self) {
-        self.enabled = true;
-    }
-
     pub fn set_total(&mut self, total: usize) {
         if let Some(ref mut download_info) = self.download_info {
             download_info.set_total(total);
@@ -260,19 +211,6 @@ impl DownloadInfo {
             failed: false,
             progress: 0,
             total: 0,
-            previous_progress: 0,
-            recent_progress: 0,
-            recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,
-            elapsed: Duration::new(0, 0),
-            path: PathBuf::new(),
-        }
-    }
-
-    pub fn with_total(total: usize) -> DownloadInfo {
-        DownloadInfo {
-            failed: false,
-            progress: 0,
-            total: total,
             previous_progress: 0,
             recent_progress: 0,
             recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,

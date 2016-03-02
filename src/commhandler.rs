@@ -3,10 +3,8 @@ use std::sync::mpsc::{channel, Sender, Receiver, SendError};
 use std::error::Error;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
-use std::thread;
 use threadpool::ThreadPool;
 use downloader::*;
-use std::time::Duration;
 use helper::Ignore;
 use gui::update_gui;
 use time::precise_time_ns;
@@ -103,7 +101,6 @@ impl CommHandler {
             let mut downloader = Downloader::new(job, tchan_cmd_r, progress_sender);
             {
                 *self.current_threads.lock().unwrap() += 1;
-                let max_threads = self.max_threads.clone();
                 let current_threads = self.current_threads.clone();
                 self.threadpool.execute(move || {
                     let mut keep_downloading = true;
@@ -229,16 +226,6 @@ impl CommHandler {
         let dlid = progress.0;
         match progress.1 {
             DownloadUpdate::SetSize(content_length) => {
-                let mut idx = 0;
-                for download in self.data.iter_mut() {
-                    if &download.id() == &dlid {
-                        download.set_total(content_length);
-                        break;
-                    }
-                    if download.downloading() {
-                        idx += 1;
-                    }
-                }
                 self.id_data
                     .get_mut(&dlid)
                     .expect("No such id_data entry")
@@ -248,25 +235,8 @@ impl CommHandler {
                 // add to cache
                 self.datacache.increment(dlid, dlamnt);
             }
-            DownloadUpdate::Message(message) => {
+            DownloadUpdate::Message(_) => {
                 // work on message handling
-                match &message as &str {
-                    "finished" => {
-                        // get idx
-                        let mut idx = 0;
-                        for download in self.data.iter_mut() {
-                            if &download.id() == &dlid {
-                                break;
-                            }
-                            if download.downloading() {
-                                idx += 1;
-                            }
-                        }
-                        // send message to gui
-                        self.pending_changes.push(GuiChange::Finished(idx));
-                    }
-                    _ => {}
-                }
             }
         }
     }
