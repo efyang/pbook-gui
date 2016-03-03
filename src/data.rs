@@ -11,6 +11,7 @@ pub enum DownloadUpdate {
     Message(String),
     Amount(usize),
     SetSize(usize),
+    Finished,
 }
 
 pub enum GuiCmdMsg {
@@ -191,6 +192,12 @@ impl Download {
             Err("Progress cannot be incremented because it is not downloading.".to_owned())
         }
     }
+
+    pub fn set_finished(&mut self) {
+        if let Some(ref mut download_info) = self.download_info {
+            download_info.set_finished();
+        }    
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -252,10 +259,10 @@ impl DownloadInfo {
         let streta;
         if self.progress == 0 && self.total == 0 {
             streta = "N/A".to_owned();
+        } else if self.progress >= self.total {
+            streta = "Done.".to_owned();
         } else if maximum(eta, i32::MAX as f32) == eta || speed == 0.0 {
             streta = "∞".to_owned();
-        } else if self.progress == self.total {
-            streta = "Done.".to_owned();
         } else {
             let dur = time::Duration::seconds(maximum(minimum(eta as i64, i64::MAX), 0));
             streta = format!("{}{}{}{}{}s",
@@ -272,6 +279,11 @@ impl DownloadInfo {
 
     pub fn set_total(&mut self, total: usize) {
         self.total = total;
+    }
+
+    pub fn set_finished(&mut self) {
+        self.recent_progress = 0;
+        self.progress = self.total;
     }
 
     pub fn set_path(&mut self, path: PathBuf) {

@@ -18,6 +18,7 @@ pub struct CommHandler {
     data: Vec<Download>,
     // id:download
     id_data: HashMap<u64, Download>,
+    // list of all ids
     liststore_ids: Vec<u64>,
     jobs: Vec<Download>,
     // download id, amount of bytes to add
@@ -223,20 +224,47 @@ impl CommHandler {
     }
 
     fn handle_progress_msg(&mut self, progress: TpoolProgressMsg) {
-        let dlid = progress.0;
+        let id = progress.0;
         match progress.1 {
             DownloadUpdate::SetSize(content_length) => {
-                self.id_data
-                    .get_mut(&dlid)
-                    .expect("No such id_data entry")
-                    .set_total(content_length);
+                let mut idx = 0;
+                for download in self.data.iter_mut() {
+                    if &download.id() == &id {
+                        download.set_total(content_length);
+                        self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
+                        break;
+                    }
+                    if download.downloading() {
+                        idx += 1;
+                    }
+                }            
             }
             DownloadUpdate::Amount(dlamnt) => {
                 // add to cache
-                self.datacache.increment(dlid, dlamnt);
+                self.datacache.increment(id, dlamnt);
             }
-            DownloadUpdate::Message(_) => {
-                // work on message handling
+            DownloadUpdate::Finished => {
+                let mut idx = 0;
+                for download in self.data.iter_mut() {
+                    if &download.id() == &id {
+                        download.set_finished();
+                        // remove any other sets
+                        for i in (0..self.pending_changes.len()).rev() {
+                            if let GuiChange::Set(otheridx, _) = self.pending_changes[i] {
+                                if otheridx == idx {
+                                    self.pending_changes.remove(i);
+                                }
+                            }
+                        }
+                        self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
+                        break;
+                    } else if download.downloading() {
+                        idx += 1;
+                    }
+                }
+            }
+            DownloadUpdate::Message(msg) => {
+                println!("{}", msg);
             }
         }
     }

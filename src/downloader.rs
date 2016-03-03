@@ -116,7 +116,7 @@ impl Downloader {
                         // Finished downloading
                         outfile.flush().expect("Failed to flush to outfile");
                         self.progress_send
-                            .send((self.id, DownloadUpdate::Message("finished".to_owned())))
+                            .send((self.id, DownloadUpdate::Finished))
                             .expect("Failed to send message");
                         return Err("finished".to_owned());
                     }
