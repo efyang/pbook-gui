@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Sender, Receiver};
 use std::io::prelude::*;
 use std::io::{Error, BufWriter, ErrorKind};
-use std::fs::{File, copy, create_dir_all};
+use std::fs::{File, copy, create_dir_all, rename};
 use std::time::Duration;
 use hyper::client::Client;
 use hyper::client::response::Response;
@@ -17,6 +17,7 @@ pub struct Downloader {
     // download_path: PathBuf,
     cmd_recv: Receiver<TpoolCmdMsg>,
     progress_send: Sender<TpoolProgressMsg>,
+    actualpath: PathBuf,
     filepath: PathBuf,
     client: Client,
     stream: Option<Response>,
@@ -30,13 +31,21 @@ impl Downloader {
                progress_send: Sender<TpoolProgressMsg>)
                -> Downloader {
         let dlname = download.name().to_owned();
+        let path = download.path().to_owned().join(name_to_fname(&dlname));
         Downloader {
             name: dlname.clone(),
             url: download.url().to_owned(),
             id: download.id(),
             cmd_recv: cmd_recv,
             progress_send: progress_send,
-            filepath: download.path().to_owned().join(name_to_fname(&dlname)),
+            actualpath: path.clone(),
+            filepath: path.parent()
+                          .unwrap()
+                          .join(path.file_name()
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_owned() + ".tmp"),
             client: {
                 let mut client = Client::new();
                 client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
@@ -115,6 +124,9 @@ impl Downloader {
                     Ok(0) => {
                         // Finished downloading
                         outfile.flush().expect("Failed to flush to outfile");
+                        drop(outfile);
+                        rename(&self.filepath, &self.actualpath)
+                            .expect("Failed to rename tmp file.");
                         self.progress_send
                             .send((self.id, DownloadUpdate::Finished))
                             .expect("Failed to send message");
@@ -143,14 +155,14 @@ impl Downloader {
 
         Ok(())
     }
-    
+
     #[allow(dead_code)]
     fn send_message(&self, message: String) {
         self.progress_send
             .send((self.id, DownloadUpdate::Message(message)))
             .expect("Failed to send message");
     }
-    
+
     #[allow(dead_code)]
     fn change_path(&mut self, newpath: &Path) {
         if newpath != self.filepath {
@@ -209,4 +221,3 @@ fn make_chdir_error(errorstring: Error, kind: &str) -> String {
             kind,
             errorstring)
 }
-
