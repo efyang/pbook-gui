@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Sender, Receiver};
 use std::io::prelude::*;
 use std::io::{Error, BufWriter, ErrorKind};
-use std::fs::{File, copy};
+use std::fs::{File, copy, create_dir_all};
 use std::time::Duration;
 use hyper::client::Client;
 use hyper::client::response::Response;
@@ -72,7 +72,14 @@ impl Downloader {
             }
         }
 
+        // NOTE: Need to make dir before making file
+
         if let None = self.outfile {
+            if let Err(e) = create_dir_all(&self.filepath.parent().expect("No such dir parent")) {
+                println!("dir creation error");
+                return Err(format!("{}", e));
+            }
+
             match File::create(&self.filepath) {
                 Ok(f) => {
                     self.outfile = Some(BufWriter::new(f));

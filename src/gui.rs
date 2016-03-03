@@ -122,7 +122,7 @@ pub fn gui(data: &mut Vec<Category>,
             // First send message, then update visually - more informative
             let indices = path.get_indices();
             let ref category = data[indices[0] as usize];
-            let category_dir = download_dir.join(name_to_fname(category.name()));
+            let category_dir = download_dir.join(name_to_dname(category.name()));
             // Update data and the view
             let is_category;
             match path.get_depth() {

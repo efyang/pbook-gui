@@ -1,4 +1,5 @@
 use std::iter;
+use std::char;
 
 pub fn make_string_if_nonzero(n: i64, id: &'static str) -> String {
     if n != 0 {
@@ -95,6 +96,25 @@ pub fn name_to_fname(s: &str) -> String {
     spaces_to_underscores(s) + ".pdf"
 }
 
-pub fn spaces_to_underscores(s: &str) -> String {
+pub fn name_to_dname(s: &str) -> String {
+    spaces_to_underscores(&remove_leading_spaces(s))
+}
+
+fn spaces_to_underscores(s: &str) -> String {
     s.replace(" ", "_")
+}
+
+fn remove_leading_spaces(s: &str) -> String {
+    let first_non_whitespace = s.find(char::is_not_whitespace).unwrap();
+    return s[first_non_whitespace..s.len()].to_owned();
+}
+
+trait NotWhitespace {
+    fn is_not_whitespace(self) -> bool;
+}
+
+impl NotWhitespace for char {
+    fn is_not_whitespace(self) -> bool {
+        !self.is_whitespace()
+    }
 }
