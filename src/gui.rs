@@ -108,8 +108,15 @@ pub fn gui(data: &mut Vec<Category>,
                                                               1);
     categoryview.set_model(Some(&category_store));
     // make default download directory
-
-    let mut download_dir = current_working_dir.join("downloads");
+    
+    // NOTE: account for whether in bin dir or not
+    let mut download_dir;
+    if current_working_dir.file_name().unwrap() == "bin" {
+        let cwdparent = current_working_dir.parent().unwrap();
+        download_dir = cwdparent.join("downloads");
+    } else {
+        download_dir = current_working_dir.join("downloads");
+    }
 
     if !download_dir.is_dir() {
         fs::create_dir(download_dir.clone()).expect("Failed to create default download directory");
