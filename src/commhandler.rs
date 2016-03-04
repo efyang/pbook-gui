@@ -15,11 +15,10 @@ pub struct CommHandler {
     max_threads: Arc<Mutex<usize>>,
     current_threads: Arc<Mutex<usize>>,
     // the current model
-    data: Vec<Download>,
     // id:download
-    id_data: HashMap<u64, Download>,
+    data: HashMap<u64, Download>,
     // list of all ids
-    liststore_ids: Vec<u64>,
+    current_ids: Vec<u64>,
     jobs: Vec<Download>,
     // download id, amount of bytes to add
     datacache: HashMap<u64, usize>,
@@ -50,9 +49,8 @@ impl CommHandler {
             threadpool: ThreadPool::new(basethreads),
             max_threads: Arc::new(Mutex::new(basethreads)),
             current_threads: Arc::new(Mutex::new(0)),
-            data: start_data.clone(),
-            id_data: id_data_hm,
-            liststore_ids: Vec::new(),
+            data: id_data_hm,
+            current_ids: Vec::new(),
             jobs: Vec::new(),
             datacache: HashMap::new(),
             pending_changes: Vec::new(),
@@ -136,15 +134,14 @@ impl CommHandler {
         let current_time = precise_time_ns();
         if current_time >= self.next_gui_update_t {
             // add everything from the datacache to the main data
-            let mut idx = 0;
-            for download in self.data.iter_mut() {
-                let id = download.id();
+            for idx in 0..self.current_ids.len() {
+                let id = self.current_ids[idx];
+                let mut download = self.data.get_mut(&id).unwrap();
                 if download.downloading() {
                     download.increment_progress(*self.datacache.get(&id).unwrap_or(&0))
                             .unwrap();
                     // add to pending changes
                     self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
-                    idx += 1;
                 }
             }
             // clear datacache
@@ -165,23 +162,15 @@ impl CommHandler {
     fn handle_gui_cmd(&mut self, cmd: GuiCmdMsg) {
         match cmd {
             GuiCmdMsg::Add(id, path) => {
-                let mut download = self.id_data[&id].clone();
+                let mut download = self.data.get_mut(&id).unwrap();
                 download.start_download();
                 download.set_enable_state(true);
                 download.set_path(path);
                 // add to jobs
                 self.jobs.push(download.clone());
-                self.liststore_ids.push(id);
+                self.current_ids.push(id);
                 // add to pending changes
                 self.pending_changes.push(GuiChange::Add(download.to_owned()));
-                // start in main data model
-                for item in self.data.iter_mut() {
-                    if item.id() == id {
-                        item.set_enable_state(true);
-                        item.start_download();
-                        break;
-                    }
-                }
             }
             GuiCmdMsg::Remove(id) => {
                 let mut in_jobs = false;
@@ -193,20 +182,17 @@ impl CommHandler {
                         break;
                     }
                 }
-                // remove from main data model
-                for idx in 0..self.data.len() {
-                    let ref mut dl = self.data[idx];
-                    if dl.id() == id {
-                        dl.set_enable_state(false);
-                        dl.stop_download();
-                        break;
-                    }
+
+                {
+                    let mut dl = self.data.get_mut(&id).unwrap();
+                    dl.set_enable_state(false);
+                    dl.stop_download();
                 }
 
                 // add to pending changes
-                for idx in 0..self.liststore_ids.len() {
-                    if self.liststore_ids[idx] == id {
-                        self.liststore_ids.remove(idx);
+                for idx in 0..self.current_ids.len() {
+                    if self.current_ids[idx] == id {
+                        self.current_ids.remove(idx);
                         self.pending_changes.push(GuiChange::Remove(idx));
                         break;
                     }
@@ -227,27 +213,24 @@ impl CommHandler {
         let id = progress.0;
         match progress.1 {
             DownloadUpdate::SetSize(content_length) => {
-                let mut idx = 0;
-                for download in self.data.iter_mut() {
-                    if &download.id() == &id {
-                        download.set_total(content_length);
+                let mut download = self.data.get_mut(&id).unwrap();
+                download.set_total(content_length);
+                for idx in 0..self.current_ids.len() {
+                    if self.current_ids[idx] == id {
                         self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
                         break;
                     }
-                    if download.downloading() {
-                        idx += 1;
-                    }
-                }            
+                }
             }
-            DownloadUpdate::Amount(dlamnt) => {
+            DownloadUpdate::Amount(amount) => {
                 // add to cache
-                self.datacache.increment(id, dlamnt);
+                self.datacache.increment(id, amount);
             }
             DownloadUpdate::Finished => {
-                let mut idx = 0;
-                for download in self.data.iter_mut() {
-                    if &download.id() == &id {
-                        download.set_finished();
+                let mut download = self.data.get_mut(&id).unwrap();
+                download.set_finished();
+                for idx in 0..self.current_ids.len() {
+                    if self.current_ids[idx] == id {
                         // remove any other sets
                         for i in (0..self.pending_changes.len()).rev() {
                             if let GuiChange::Set(otheridx, _) = self.pending_changes[i] {
@@ -258,8 +241,6 @@ impl CommHandler {
                         }
                         self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
                         break;
-                    } else if download.downloading() {
-                        idx += 1;
                     }
                 }
             }
