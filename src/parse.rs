@@ -16,6 +16,7 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
     let mut categories: Vec<Category> = Vec::with_capacity(vec_data.len());
     let mut category_name: String = "Index".to_owned();
     let mut category: Category = Category::new(category_name, vec![]);
+    let mut titles: Vec<String> = Vec::with_capacity(vec_data.len());
     for entry in vec_data {
         let title_head = [title_identifier; 3]
                              .into_iter()
@@ -25,13 +26,22 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
         if entry.contains(&title_head) {
             categories.push(category.clone());
             category_name = get_title_name('#', entry);
+            titles.clear();
             category = Category::new(category_name, vec![])
         } else {
             match get_item_info(entry) {
                 Some(data) => {
+                    // data.0 is title
+                    let preexisting_titlecount = titles.count_item(&data.0);
+                    titles.push(data.0.clone());
                     // data.1 is url
                     if data.1.to_ascii_lowercase().contains("pdf") {
-                        let dl = Download::new(&data.0, &data.1);
+                        let dl;
+                        if preexisting_titlecount > 0 {
+                            dl = Download::new(&format!("{} {}", &data.0, preexisting_titlecount), &data.1);
+                        } else {
+                            dl = Download::new(&data.0, &data.1);
+                        }
                         category.add_download(dl);
                     }
                 }
@@ -49,6 +59,22 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
                            .map(|c| c.clone())
                            .collect();
     categories
+}
+
+trait CountItem {
+    fn count_item(&self, item: &str) -> usize;
+}
+
+impl CountItem for Vec<String> {
+    fn count_item(&self, item: &str) -> usize {
+        let mut count = 0;
+        for s in self.iter() {
+            if s == item {
+                count += 1;
+            }
+        }
+        return count;
+    }
 }
 
 fn blanks_to_newlines(vec_data: Vec<String>) -> String {

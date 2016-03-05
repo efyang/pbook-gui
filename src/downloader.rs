@@ -3,6 +3,7 @@ use std::io::prelude::*;
 use std::io::{Error, BufWriter, ErrorKind};
 use std::fs::{File, copy, create_dir_all, rename};
 use std::time::Duration;
+use hyper;
 use hyper::client::Client;
 use hyper::client::response::Response;
 use hyper::header::ContentLength;
@@ -58,16 +59,8 @@ impl Downloader {
     }
 
     pub fn begin(&mut self) -> Result<(), String> {
-        if let None = self.stream {
-            match self.client.get(&self.url).send() {
-                Ok(s) => {
-                    self.stream = Some(s);
-                }
-                Err(e) => {
-                    println!("geterror");
-                    return Err(format!("{}", e));
-                }
-            }
+        if let Err(e) = self.get_url(0, 5) {
+            return Err(e);
         }
 
         if let Some(ref stream) = self.stream {
@@ -103,6 +96,37 @@ impl Downloader {
         Ok(())
     }
 
+    pub fn get_url(&mut self, tries: usize, maxtries: usize) -> Result<(), String> {
+        if tries >= maxtries {
+            return Err("Over try limit".to_owned());
+        } else {
+            if let None = self.stream {
+                match self.client.get(&self.url).send() {
+                    Ok(s) => {
+                        self.stream = Some(s);
+                        return Ok(());
+                    }
+                    Err(e) => {
+                        if let hyper::Error::Io(ioerr) = e {
+                            if ioerr.kind() == ErrorKind::WouldBlock {
+                                return self.get_url(tries, maxtries);
+                            } else {
+                                println!("{:?}", ioerr.kind());
+                                println!("geterror");
+                                return self.get_url(tries + 1, maxtries);
+                            }
+                        } else {
+                            return Err(format!("{:?}", e));
+                        }
+                    }
+                }
+            } else {
+                return Ok(());
+            }
+        }
+        
+    }
+
     pub fn update(&mut self) -> Result<(), String> {
         // check messages
         if let Ok(cmd) = self.cmd_recv.try_recv() {
@@ -126,7 +150,7 @@ impl Downloader {
                         outfile.flush().expect("Failed to flush to outfile");
                         drop(outfile);
                         rename(&self.filepath, &self.actualpath)
-                            .expect("Failed to rename tmp file.");
+                            .expect(&format!("Failed to rename tmp file: {:?} to {:?}", self.filepath, self.actualpath));
                         self.progress_send
                             .send((self.id, DownloadUpdate::Finished))
                             .expect("Failed to send message");
@@ -146,7 +170,7 @@ impl Downloader {
                             println!("Name: {}", self.name);
                             println!("Url: {}", self.url);
                             println!("Error: {:?}", e.into_inner());
-                            panic!("Error");
+                            return Err("Downloader Error".to_owned());
                         }
                     }
                 }

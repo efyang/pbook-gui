@@ -87,7 +87,7 @@ impl CommHandler {
                 }
             }
         }
-
+        print!("\r{:?}", *self.current_threads.lock().unwrap());
 
         // start execution of any jobs that exist
         let max_threads = self.max_threads.lock().unwrap().clone();
