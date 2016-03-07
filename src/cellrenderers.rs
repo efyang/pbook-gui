@@ -1,5 +1,7 @@
 use gtk;
 use gtk::{IsA, CellRenderer};
+use gtkdef::SetEllipsizeMode;
+use pango_sys::PangoEllipsizeMode;
 
 pub enum AddMode {
     PackEnd,
@@ -74,6 +76,7 @@ impl AddCellRenderers for gtk::TreeView {
                                 add_mode: AddMode,
                                 column_number: i32) {
         let cell = gtk::CellRendererText::new();
+        cell.set_ellipsize_mode(PangoEllipsizeMode::End);
         self.add_cell_renderer_column(title,
                                       &cell,
                                       fill,

@@ -15,6 +15,7 @@ gtk-sys = {git = "https://github.com/gtk-rs/sys"}
 glib = {git = "https://github.com/gtk-rs/glib"}
 gdk = {git = "https://github.com/gtk-rs/gdk"}
 gobject-sys = {git = "https://github.com/gtk-rs/sys"}
+pango-sys = {git = "https://github.com/gtk-rs/sys"}
 
 num_cpus = "0.2"
 time = "0.1"
