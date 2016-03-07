@@ -14,9 +14,11 @@ gtk = {git = "https://github.com/gtk-rs/gtk"}
 gtk-sys = {git = "https://github.com/gtk-rs/sys"}
 glib = {git = "https://github.com/gtk-rs/glib"}
 gdk = {git = "https://github.com/gtk-rs/gdk"}
+gobject-sys = {git = "https://github.com/gtk-rs/sys"}
+
 num_cpus = "0.2"
 time = "0.1"
-libc = "0.1"
+libc = "0.2"
 tiny-keccak = "1.0.3"
 rustc-serialize = "0.3.16"
 lazy_static = "0.1.15"

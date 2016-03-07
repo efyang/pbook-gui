@@ -2,7 +2,7 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
-use gdk::screen::Screen;
+use gdk::Screen;
 use gtk::{CssProvider, STYLE_PROVIDER_PRIORITY_APPLICATION, StyleContext};
 
 use gtkdef::*;

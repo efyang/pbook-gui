@@ -1,6 +1,7 @@
 use glib;
 use gtk_sys;
 use gdk;
+use gobject_sys;
 use libc::ssize_t;
 use gtk_sys::{GtkStyleProvider, GtkCssProvider};
 use gtk::{CssProvider, StyleContext, is_initialized};
