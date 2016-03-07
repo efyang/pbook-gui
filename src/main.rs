@@ -8,6 +8,7 @@ extern crate time;
 extern crate gtk_sys;
 extern crate gobject_sys;
 extern crate pango_sys;
+extern crate gdk_pixbuf;
 extern crate libc;
 #[macro_use]
 extern crate lazy_static;

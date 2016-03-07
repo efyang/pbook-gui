@@ -13,6 +13,8 @@ use helper::*;
 use cellrenderers::*;
 use theme::*;
 use constants::{DEFAULT_GTK_CSS_CONFIG, SECONDARY_GTK_CSS_CONFIG};
+use include::RAW_ICON;
+use gdk_pixbuf::PixbufLoader;
 
 pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<GuiUpdateMsg>,
@@ -44,7 +46,11 @@ pub fn gui(data: &mut Vec<Category>,
     window.set_border_width(10);
     window.set_position(gtk::WindowPosition::Center);
     window.set_default_size(1000, 500);
-
+    let pixbuf_loader = PixbufLoader::new_with_type("ico").unwrap();
+    pixbuf_loader.loader_write(RAW_ICON).unwrap();
+    let window_icon = pixbuf_loader.get_pixbuf().unwrap();
+    pixbuf_loader.close().unwrap();
+    window.set_icon(Some(&window_icon));
     // placeholder values
     // for category in data.iter_mut() {
     // category.set_enable_state_all(true);
