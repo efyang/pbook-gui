@@ -73,11 +73,11 @@ pub fn gui(data: &mut Vec<Category>,
     // name, size, progress, speed, eta
     let download_column_types = [Type::String, Type::String, Type::F32, Type::String, Type::String];
     let download_store = gtk::ListStore::new(&download_column_types);
-    downloadview.add_text_renderer_column("Name", true, true, false, AddMode::PackStart, 0);
-    downloadview.add_text_renderer_column("Size", true, true, false, AddMode::PackStart, 1);
+    downloadview.add_text_renderer_column("Name", true, true, false, AddMode::PackStart, true, 0);
+    downloadview.add_text_renderer_column("Size", true, true, false, AddMode::PackStart, false, 1);
     downloadview.add_progress_renderer_column("Progress", true, true, true, AddMode::PackStart, 2);
-    downloadview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart, 3);
-    downloadview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, 4);
+    downloadview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart, false, 3);
+    downloadview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, false, 4);
 
     for item in initial_model {
         download_store.add_download(item.1);
@@ -105,7 +105,7 @@ pub fn gui(data: &mut Vec<Category>,
     let category_column_types = [Type::String, Type::Bool];
     let category_store = gtk::TreeStore::new(&category_column_types);
     category_store.add_categories(&data);
-    categoryview.add_text_renderer_column("Categories", true, true, true, AddMode::PackStart, 0);
+    categoryview.add_text_renderer_column("Categories", true, true, true, AddMode::PackStart, true, 0);
     let toggle_cell = categoryview.add_toggle_renderer_column("Enabled?",
                                                               false,
                                                               false,
@@ -373,8 +373,7 @@ fn download_to_values(dl: &Download) -> Option<(u64, (String, String, f32, Strin
     match dl.download_info() {
         &Some(ref download_info) => {
             let dlid = dl.id();
-            // shorten needed until ellipsize is implemented for CellRendererText
-            let name = dl.name().to_owned().shorten(50);
+            let name = dl.name().to_owned();
             let size = (download_info.total() as f32).convert_to_byte_units(0);
             let percent = download_info.percentage();
             // actual gtk amount is out of 100.0

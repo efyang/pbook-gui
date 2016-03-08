@@ -3,7 +3,7 @@ use gtk_sys;
 use gdk;
 use gobject_sys::g_object_set;
 use pango_sys::PangoEllipsizeMode;
-use libc::{ssize_t, c_void};
+use libc::{ssize_t, c_void, c_char};
 use gtk_sys::{GtkStyleProvider, GtkCssProvider};
 use gtk::{CssProvider, StyleContext, is_initialized, CellRendererText, ToValue};
 use glib::translate::{ToGlibPtr, Stash};
@@ -18,12 +18,12 @@ impl SetEllipsizeMode for CellRendererText {
         if !is_initialized() {
             panic!("Gtk not initialized");
         }
-        // set "ellipsize-set" to true
         let stash: Stash<*mut gtk_sys::GtkCellRendererText, _> = self.to_glib_none();
         let pointer = stash.0 as *mut c_void;
         let nullptr: *const c_void = ::std::ptr::null();
-        let ell_set_ptr: *const i8 = CString::new("ellipsize-set").unwrap().as_ptr();
-        let ell_ptr: *const i8 = CString::new("ellipsize").unwrap().as_ptr();
+        let ell_set_ptr: *const c_char = CString::new("ellipsize-set").unwrap().as_ptr();
+        let ell_ptr: *const c_char = CString::new("ellipsize").unwrap().as_ptr();
+        // set "ellipsize-set" to true
         unsafe {
             g_object_set(pointer, ell_set_ptr, true.to_value(), nullptr);
 
