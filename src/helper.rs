@@ -55,22 +55,6 @@ impl Repetition for str {
     }
 }
 
-pub trait Shorten {
-    fn shorten(&mut self, maxchars: isize) -> String;
-}
-
-impl Shorten for String {
-    fn shorten(&mut self, maxchars: isize) -> String {
-        let length = self.len() as isize;
-        if length > maxchars {
-            self.truncate(minimum(maximum(maxchars - 3, 0), length) as usize);
-            self.clone() + "..."
-        } else {
-            self.clone()
-        }
-    }
-}
-
 pub fn maximum<T: PartialOrd>(x: T, y: T) -> T {
     if x >= y {
         x

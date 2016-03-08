@@ -24,6 +24,7 @@ pub trait AddCellRenderers {
                                 resizable: bool,
                                 expand: bool,
                                 add_mode: AddMode,
+                                ellipsized: bool,
                                 column_number: i32);
     fn add_progress_renderer_column(&self,
                                     title: &str,
@@ -74,9 +75,12 @@ impl AddCellRenderers for gtk::TreeView {
                                 resizable: bool,
                                 expand: bool,
                                 add_mode: AddMode,
+                                ellipsized: bool,
                                 column_number: i32) {
         let cell = gtk::CellRendererText::new();
-        cell.set_ellipsize_mode(PangoEllipsizeMode::End);
+        if ellipsized {
+            cell.set_ellipsize_mode(PangoEllipsizeMode::End);
+        }
         self.add_cell_renderer_column(title,
                                       &cell,
                                       fill,
