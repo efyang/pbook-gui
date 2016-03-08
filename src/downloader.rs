@@ -10,6 +10,7 @@ use hyper::header::ContentLength;
 use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
 use helper::name_to_fname;
+use std::fs::metadata;
 
 pub struct Downloader {
     name: String,
@@ -59,40 +60,58 @@ impl Downloader {
     }
 
     pub fn begin(&mut self) -> Result<(), String> {
-        if let Err(e) = self.get_url(0, 5) {
-            return Err(e);
-        }
-
-        if let Some(ref stream) = self.stream {
-            match stream.headers.get::<ContentLength>() {
-                Some(content_length) => {
-                    self.progress_send
-                        .send((self.id, DownloadUpdate::SetSize(**content_length as usize)))
-                        .expect("Failed to send content length");
-                }
-                None => {}
+        if self.actualpath.exists() {
+            // get file metadata (size)
+            let filelength;
+            if let Ok(metadata) = metadata(self.actualpath.clone()) {
+                filelength = metadata.len();
+            } else {
+                filelength = 1;
             }
-        }
+            self.progress_send
+                .send((self.id, DownloadUpdate::SetSize(filelength as usize)))
+                .expect("Failed to send content length");
 
-        // NOTE: Need to make dir before making file
-
-        if let None = self.outfile {
-            if let Err(e) = create_dir_all(&self.filepath.parent().expect("No such dir parent")) {
-                println!("dir creation error");
-                return Err(format!("{}", e));
+            // send finished signal
+            self.progress_send
+                .send((self.id, DownloadUpdate::Finished))
+                .expect("Failed to send finished");
+            return Err("finished".to_owned());
+        } else {
+            if let Err(e) = self.get_url(0, 5) {
+                return Err(e);
             }
 
-            match File::create(&self.filepath) {
-                Ok(f) => {
-                    self.outfile = Some(BufWriter::new(f));
+            if let Some(ref stream) = self.stream {
+                match stream.headers.get::<ContentLength>() {
+                    Some(content_length) => {
+                        self.progress_send
+                            .send((self.id, DownloadUpdate::SetSize(**content_length as usize)))
+                            .expect("Failed to send content length");
+                    }
+                    None => {}
                 }
-                Err(e) => {
-                    println!("fopen error");
+            }
+
+            // NOTE: Need to make dir before making file
+
+            if let None = self.outfile {
+                if let Err(e) = create_dir_all(&self.filepath.parent().expect("No such dir parent")) {
+                    println!("dir creation error");
                     return Err(format!("{}", e));
                 }
+
+                match File::create(&self.filepath) {
+                    Ok(f) => {
+                        self.outfile = Some(BufWriter::new(f));
+                    }
+                    Err(e) => {
+                        println!("fopen error");
+                        return Err(format!("{}", e));
+                    }
+                }
             }
         }
-
         Ok(())
     }
 

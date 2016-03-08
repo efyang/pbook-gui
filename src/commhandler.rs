@@ -107,7 +107,14 @@ impl CommHandler {
                         Ok(_) => {}
                         Err(e) => {
                             *current_threads.lock().unwrap() -= 1;
-                            panic!(e);
+                            match &e as &str {
+                                "finished" => {
+                                    keep_downloading = false;
+                                }
+                                _ => {
+                                    panic!(e);
+                                }
+                            }
                         }
                     }
                     while keep_downloading {
