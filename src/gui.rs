@@ -1,6 +1,7 @@
 use data::*;
 use gtk;
 use gtk::prelude::*;
+use gtk::{Orientation, ButtonBoxStyle};
 use std::env;
 use std::sync::mpsc::{Sender, Receiver, SendError};
 use std::sync::Mutex;
@@ -32,7 +33,7 @@ pub fn gui(data: &mut Vec<Category>,
         }
     };
     let current_working_dir = current_exe_path.parent()
-        .unwrap_or(Path::new(".."));
+                                              .unwrap_or(Path::new(".."));
     let default_config_path = current_working_dir.join(DEFAULT_GTK_CSS_CONFIG);
     let secondary_config_path = current_working_dir.join(SECONDARY_GTK_CSS_CONFIG);
 
@@ -100,7 +101,13 @@ pub fn gui(data: &mut Vec<Category>,
     let category_column_types = [Type::String, Type::Bool];
     let category_store = gtk::TreeStore::new(&category_column_types);
     category_store.add_categories(&data);
-    categoryview.add_text_renderer_column("Categories", true, true, true, AddMode::PackStart, true, 0);
+    categoryview.add_text_renderer_column("Categories",
+                                          true,
+                                          true,
+                                          true,
+                                          AddMode::PackStart,
+                                          true,
+                                          0);
     let toggle_cell = categoryview.add_toggle_renderer_column("Enabled?",
                                                               false,
                                                               false,
@@ -139,8 +146,8 @@ pub fn gui(data: &mut Vec<Category>,
                     for download in category.downloads().iter() {
                         // NOTE: PLACEHOLDER PATHS
                         if let Err(error) = update_download(command_send_channel.clone(),
-                        download.to_owned(),
-                        category_dir.clone()) {
+                                                            download.to_owned(),
+                                                            category_dir.clone()) {
                             println!("{}", error);
                         }
                     }
@@ -149,8 +156,8 @@ pub fn gui(data: &mut Vec<Category>,
                 2 => {
                     let download = category.get_download_at_idx(indices[1] as usize);
                     if let Err(error) = update_download(command_send_channel.clone(),
-                    download.to_owned(),
-                    category_dir) {
+                                                        download.to_owned(),
+                                                        category_dir) {
                         println!("{}", error);
                     }
                     is_category = false;
@@ -176,17 +183,41 @@ pub fn gui(data: &mut Vec<Category>,
         });
     }
 
+    let button_state_box = gtk::ButtonBox::new(Orientation::Horizontal);
+    button_state_box.set_layout(ButtonBoxStyle::Center);
+    let enable_all_button = gtk::Button::new_with_label("Enable All");
+    let disable_all_button = gtk::Button::new_with_label("Disable All");
+    button_state_box.add(&enable_all_button);
+    button_state_box.add(&disable_all_button);
+
+    // connect signals
+    {
+        let command_send_channel = command_send_channel.clone();
+        enable_all_button.connect_clicked(move |_| {
+            println!("Enable all");
+        });
+    }
+
+    {
+        let command_send_channel = command_send_channel.clone();
+        disable_all_button.connect_clicked(move |_| {
+            println!("Disable all");
+        });
+    }
+
     let category_scroll = gtk::ScrolledWindow::new(None, None);
     category_scroll.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
     category_scroll.add(&categoryview);
 
     let category_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    category_box.pack_start(&category_scroll, true, true, 0);
+    category_box.pack_start(&button_state_box, false, false, 10);
+    category_box.pack_end(&category_scroll, true, true, 0);
 
     // holds both the category list and the info list
-    let lists_holder = gtk::Box::new(gtk::Orientation::Horizontal, 30);
-    lists_holder.pack_start(&category_box, true, true, 0);
-    lists_holder.pack_end(&download_box, true, true, 0);
+    //let lists_holder = gtk::Box::new(gtk::Orientation::Horizontal, 30);
+    let lists_holder = gtk::Paned::new(Orientation::Horizontal);
+    lists_holder.add1(&category_box);
+    lists_holder.add2(&download_box);
     window.add(&lists_holder);
 
     {
@@ -207,8 +238,8 @@ pub fn gui(data: &mut Vec<Category>,
 
 fn toggle_bool_iter(iter: &gtk::TreeIter, category_store: &gtk::TreeStore) {
     let current_value = category_store.get_value(iter, 1)
-        .get::<bool>()
-        .expect("No Value");
+                                      .get::<bool>()
+                                      .expect("No Value");
     let new_value = (!current_value).to_value();
     category_store.set_value(iter, 1, &new_value);
 }
@@ -240,7 +271,7 @@ fn update_local() -> Continue {
                         &GuiChange::Remove(idx) => {
                             // remove index
                             let mut iter = download_store.iter_nth_child(None, idx as i32)
-                                .expect("no such iter");
+                                                         .expect("no such iter");
                             download_store.remove(&mut iter);
                             DOWNLOADS.lock().unwrap().remove(idx);
                         }
@@ -255,7 +286,7 @@ fn update_local() -> Continue {
                         }
                         &GuiChange::Set(idx, ref download) => {
                             let iter = download_store.iter_nth_child(None, idx as i32)
-                                .expect("no such iter");
+                                                     .expect("no such iter");
                             let values = download_to_values(&download).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
@@ -286,20 +317,20 @@ pub fn update_gui() {
 fn update_download(sender: Sender<GuiCmdMsg>,
                    download: Download,
                    out_path: PathBuf)
-    -> Result<(), SendError<GuiCmdMsg>> {
-        let id = download.id();
-        for dl in DOWNLOADS.lock().unwrap().iter() {
-            if dl.id() == id {
-                if dl.enabled() {
-                    return sender.send(GuiCmdMsg::Remove(id));
-                } else {
-                    return sender.send(GuiCmdMsg::Add(id, out_path));
-                }
+                   -> Result<(), SendError<GuiCmdMsg>> {
+    let id = download.id();
+    for dl in DOWNLOADS.lock().unwrap().iter() {
+        if dl.id() == id {
+            if dl.enabled() {
+                return sender.send(GuiCmdMsg::Remove(id));
+            } else {
+                return sender.send(GuiCmdMsg::Add(id, out_path));
             }
         }
-        // not found in current list
-        return sender.send(GuiCmdMsg::Add(id, out_path));
     }
+    // not found in current list
+    return sender.send(GuiCmdMsg::Add(id, out_path));
+}
 
 trait AddCategories {
     fn add_category(&self, category: &Category);
