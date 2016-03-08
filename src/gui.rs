@@ -16,6 +16,7 @@ use theme::*;
 use constants::{DEFAULT_GTK_CSS_CONFIG, SECONDARY_GTK_CSS_CONFIG};
 use include::RAW_ICON;
 use gdk_pixbuf::PixbufLoader;
+use std::rc::Rc;
 
 pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<GuiUpdateMsg>,
@@ -115,6 +116,7 @@ pub fn gui(data: &mut Vec<Category>,
                                                               AddMode::PackEnd,
                                                               1);
     categoryview.set_model(Some(&category_store));
+    let category_store_ref = Rc::new(category_store);
     // make default download directory
 
     // NOTE: account for whether in bin dir or not
@@ -133,6 +135,8 @@ pub fn gui(data: &mut Vec<Category>,
     {
         let data = data.to_owned();
         let command_send_channel = command_send_channel.clone();
+        let download_dir = download_dir.clone();
+        let category_store_ref = category_store_ref.clone();
         toggle_cell.connect_toggled(move |_, path| {
             // First send message, then update visually - more informative
             let indices = path.get_indices();
@@ -166,17 +170,17 @@ pub fn gui(data: &mut Vec<Category>,
                     is_category = false;
                 }
             }
-            let main_iter = category_store.get_iter(&path).expect("Invalid TreePath");
-            toggle_bool_iter(&main_iter, &category_store);
+            let main_iter = category_store_ref.get_iter(&path).expect("Invalid TreePath");
+            toggle_bool_iter(&main_iter, &category_store_ref);
 
             // set all of a category
             if is_category {
-                if category_store.iter_has_child(&main_iter) {
-                    let mut child_iter = category_store.iter_children(Some(&main_iter)).unwrap();
-                    let max_child = category_store.iter_n_children(Some(&main_iter));
+                if category_store_ref.iter_has_child(&main_iter) {
+                    let mut child_iter = category_store_ref.iter_children(Some(&main_iter)).unwrap();
+                    let max_child = category_store_ref.iter_n_children(Some(&main_iter));
                     for _ in 0..max_child {
-                        toggle_bool_iter(&child_iter, &category_store);
-                        category_store.iter_next(&mut child_iter);
+                        toggle_bool_iter(&child_iter, &category_store_ref);
+                        category_store_ref.iter_next(&mut child_iter);
                     }
                 }
             }
@@ -189,19 +193,59 @@ pub fn gui(data: &mut Vec<Category>,
     let disable_all_button = gtk::Button::new_with_label("Disable All");
     button_state_box.add(&enable_all_button);
     button_state_box.add(&disable_all_button);
-
+    
+    // NOTE: Still need to show in gui (toggle the cellrenderertoggles)
     // connect signals
     {
         let command_send_channel = command_send_channel.clone();
+        let data = data.to_owned();
+        let download_dir = download_dir.clone();
+        let category_store_ref = category_store_ref.clone();
         enable_all_button.connect_clicked(move |_| {
-            println!("Enable all");
+            for category in data.iter() {
+                let category_dir = download_dir.join(name_to_dname(category.name()));
+                let downloads = category.downloads();
+                for download in downloads {
+                    if let Err(e) = command_send_channel.send(GuiCmdMsg::Add(download.id(),
+                                                               category_dir.to_owned())) {
+                        panic!(e);
+                    }
+                }
+            }
+            // get_iter_first -> get_iter_next until returned false
+            if let Some(first_iter) = category_store_ref.get_iter_first() {
+                let mut iter = first_iter;
+                category_store_ref.set_value(&iter, 1, &true.to_value());
+                while category_store_ref.iter_next(&mut iter) {
+                    category_store_ref.set_value(&iter, 1, &true.to_value());
+                }
+            }
         });
     }
 
     {
         let command_send_channel = command_send_channel.clone();
+        let data = data.to_owned();
+        let download_dir = download_dir.clone();
+        let category_store_ref = category_store_ref.clone();
         disable_all_button.connect_clicked(move |_| {
-            println!("Disable all");
+            for category in data.iter() {
+                let category_dir = download_dir.join(name_to_dname(category.name()));
+                let downloads = category.downloads();
+                for download in downloads {
+                    if let Err(e) = command_send_channel.send(GuiCmdMsg::Remove(download.id())) {
+                        panic!(e);
+                    }
+                }
+            }
+            // get_iter_first -> get_iter_next until returned false
+            if let Some(first_iter) = category_store_ref.get_iter_first() {
+                let mut iter = first_iter;
+                category_store_ref.set_value(&iter, 1, &false.to_value());
+                while category_store_ref.iter_next(&mut iter) {
+                    category_store_ref.set_value(&iter, 1, &false.to_value());
+                }
+            }
         });
     }
 
@@ -214,7 +258,7 @@ pub fn gui(data: &mut Vec<Category>,
     category_box.pack_end(&category_scroll, true, true, 0);
 
     // holds both the category list and the info list
-    //let lists_holder = gtk::Box::new(gtk::Orientation::Horizontal, 30);
+    // let lists_holder = gtk::Box::new(gtk::Orientation::Horizontal, 30);
     let lists_holder = gtk::Paned::new(Orientation::Horizontal);
     lists_holder.add1(&category_box);
     lists_holder.add2(&download_box);
