@@ -74,8 +74,8 @@ impl AddCssProvider for StyleContext {
             let provider_pointer: *mut GtkCssProvider = provider.to_glib_full();
             let cast_provider_pointer = provider_pointer as *mut GtkStyleProvider;
             gtk_sys::gtk_style_context_add_provider_for_screen(screen.to_glib_none().0,
-                                                               cast_provider_pointer,
-                                                               priority)
+            cast_provider_pointer,
+            priority)
         }
     }
 }

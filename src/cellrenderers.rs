@@ -40,7 +40,7 @@ pub trait AddCellRenderers {
                                   expand: bool,
                                   add_mode: AddMode,
                                   column_number: i32)
-                                  -> gtk::CellRendererToggle;
+        -> gtk::CellRendererToggle;
 }
 
 impl AddCellRenderers for gtk::TreeView {
@@ -116,17 +116,17 @@ impl AddCellRenderers for gtk::TreeView {
                                   expand: bool,
                                   add_mode: AddMode,
                                   column_number: i32)
-                                  -> gtk::CellRendererToggle {
-        let cell = gtk::CellRendererToggle::new();
-        cell.set_activatable(true);
-        self.add_cell_renderer_column(title,
-                                      &cell,
-                                      fill,
-                                      resizable,
-                                      expand,
-                                      add_mode,
-                                      "active",
-                                      column_number);
-        cell
-    }
+        -> gtk::CellRendererToggle {
+            let cell = gtk::CellRendererToggle::new();
+            cell.set_activatable(true);
+            self.add_cell_renderer_column(title,
+                                          &cell,
+                                          fill,
+                                          resizable,
+                                          expand,
+                                          add_mode,
+                                          "active",
+                                          column_number);
+            cell
+        }
 }

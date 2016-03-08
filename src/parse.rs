@@ -4,11 +4,11 @@ use std::ascii::AsciiExt;
 // pub fn parse(data: &str) -> Vec<Vec<Download>> {
 pub fn parse(data: &str) -> Vec<Category> {
     let padded_data = blanks_to_newlines(data.split('\n')
-                                             .map(|l| l.trim().to_owned())
-                                             .collect::<Vec<String>>());
+                                         .map(|l| l.trim().to_owned())
+                                         .collect::<Vec<String>>());
     let category_data = padded_data.split("\n")
-                                   .map(|s| s.to_owned())
-                                   .collect::<Vec<String>>();
+        .map(|s| s.to_owned())
+        .collect::<Vec<String>>();
     get_categories(remove_blanks(category_data), '#')
 }
 
@@ -19,9 +19,9 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
     let mut titles: Vec<String> = Vec::with_capacity(vec_data.len());
     for entry in vec_data {
         let title_head = [title_identifier; 3]
-                             .into_iter()
-                             .map(|&c| c.clone())
-                             .collect::<String>() + " ";
+        .into_iter()
+        .map(|&c| c.clone())
+        .collect::<String>() + " ";
 
         if entry.contains(&title_head) {
             categories.push(category.clone());
@@ -52,12 +52,12 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
 
     // remove all unnecessary categories
     categories = categories.iter()
-                           .filter(|c| {
-                               !c.name().to_ascii_lowercase().contains("index") &&
-                               c.downloads().len() != 0
-                           })
-                           .map(|c| c.clone())
-                           .collect();
+        .filter(|c| {
+            !c.name().to_ascii_lowercase().contains("index") &&
+                c.downloads().len() != 0
+        })
+    .map(|c| c.clone())
+        .collect();
     categories
 }
 
@@ -79,29 +79,29 @@ impl CountItem for Vec<String> {
 
 fn blanks_to_newlines(vec_data: Vec<String>) -> String {
     vec_data.iter()
-            .map(|s| {
-                if s == &"".to_owned() {
-                    "\n".to_owned()
-                } else {
-                    (s.clone() + "\n")
-                }
-            })
-            .collect::<Vec<String>>()
-            .join("")
+        .map(|s| {
+            if s == &"".to_owned() {
+                "\n".to_owned()
+            } else {
+                (s.clone() + "\n")
+            }
+        })
+    .collect::<Vec<String>>()
+        .join("")
 }
 
 fn remove_blanks(vec_data: Vec<String>) -> Vec<String> {
     vec_data.iter()
-            .filter(|&s| s != &"".to_owned())
-            .map(|s| s.clone())
-            .collect::<Vec<String>>()
+        .filter(|&s| s != &"".to_owned())
+        .map(|s| s.clone())
+        .collect::<Vec<String>>()
 }
 
 // removes the identifiers (# in this case) from the category title
 fn get_title_name(title_identifier: char, raw_name: String) -> String {
     raw_name.chars()
-            .filter(|&c| c != title_identifier)
-            .collect::<String>()
+        .filter(|&c| c != title_identifier)
+        .collect::<String>()
 }
 
 // returns (name, url)

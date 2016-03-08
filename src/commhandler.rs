@@ -39,29 +39,29 @@ impl CommHandler {
     pub fn new(basethreads: usize,
                start_data: Vec<Download>,
                guichannels: (Sender<GuiUpdateMsg>, Receiver<GuiCmdMsg>))
-               -> CommHandler {
-        let (progress_s, progress_r) = channel();
-        let mut id_data_hm = HashMap::new();
-        for download in start_data.iter() {
-            id_data_hm.insert(download.id(), download.clone());
+        -> CommHandler {
+            let (progress_s, progress_r) = channel();
+            let mut id_data_hm = HashMap::new();
+            for download in start_data.iter() {
+                id_data_hm.insert(download.id(), download.clone());
+            }
+            CommHandler {
+                threadpool: ThreadPool::new(basethreads),
+                max_threads: Arc::new(Mutex::new(basethreads)),
+                current_threads: Arc::new(Mutex::new(0)),
+                data: id_data_hm,
+                current_ids: Vec::new(),
+                jobs: Vec::new(),
+                datacache: HashMap::new(),
+                pending_changes: Vec::new(),
+                gui_update_send: guichannels.0,
+                gui_cmd_recv: guichannels.1,
+                threadpool_progress_recv: progress_r,
+                threadpool_progress_send: progress_s,
+                threadpool_cmd_send: Vec::new(),
+                next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
+            }
         }
-        CommHandler {
-            threadpool: ThreadPool::new(basethreads),
-            max_threads: Arc::new(Mutex::new(basethreads)),
-            current_threads: Arc::new(Mutex::new(0)),
-            data: id_data_hm,
-            current_ids: Vec::new(),
-            jobs: Vec::new(),
-            datacache: HashMap::new(),
-            pending_changes: Vec::new(),
-            gui_update_send: guichannels.0,
-            gui_cmd_recv: guichannels.1,
-            threadpool_progress_recv: progress_r,
-            threadpool_progress_send: progress_s,
-            threadpool_cmd_send: Vec::new(),
-            next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
-        }
-    }
 
     pub fn update(&mut self) {
         // handle gui cmd
@@ -146,7 +146,7 @@ impl CommHandler {
                 let mut download = self.data.get_mut(&id).unwrap();
                 if download.downloading() {
                     download.increment_progress(*self.datacache.get(&id).unwrap_or(&0))
-                            .unwrap();
+                        .unwrap();
                     // add to pending changes
                     self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
                 }

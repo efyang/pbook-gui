@@ -31,33 +31,33 @@ impl Downloader {
     pub fn new(download: Download,
                cmd_recv: Receiver<TpoolCmdMsg>,
                progress_send: Sender<TpoolProgressMsg>)
-               -> Downloader {
-        let dlname = download.name().to_owned();
-        let path = download.path().to_owned().join(name_to_fname(&dlname));
-        Downloader {
-            name: dlname.clone(),
-            url: download.url().to_owned(),
-            id: download.id(),
-            cmd_recv: cmd_recv,
-            progress_send: progress_send,
-            actualpath: path.clone(),
-            filepath: path.parent()
+        -> Downloader {
+            let dlname = download.name().to_owned();
+            let path = download.path().to_owned().join(name_to_fname(&dlname));
+            Downloader {
+                name: dlname.clone(),
+                url: download.url().to_owned(),
+                id: download.id(),
+                cmd_recv: cmd_recv,
+                progress_send: progress_send,
+                actualpath: path.clone(),
+                filepath: path.parent()
+                    .unwrap()
+                    .join(path.file_name()
                           .unwrap()
-                          .join(path.file_name()
-                                .unwrap()
-                                .to_str()
-                                .unwrap()
-                                .to_owned() + ".tmp"),
-            client: {
-                let mut client = Client::new();
-                client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
-                client
-            },
-            stream: None,
-            outfile: None,
-            buffer: [0; 16],
+                          .to_str()
+                          .unwrap()
+                          .to_owned() + ".tmp"),
+                          client: {
+                              let mut client = Client::new();
+                              client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
+                              client
+                          },
+                          stream: None,
+                          outfile: None,
+                          buffer: [0; 16],
+            }
         }
-    }
 
     pub fn begin(&mut self) -> Result<(), String> {
         if self.actualpath.exists() {
@@ -143,7 +143,7 @@ impl Downloader {
                 return Ok(());
             }
         }
-        
+
     }
 
     pub fn update(&mut self) -> Result<(), String> {
