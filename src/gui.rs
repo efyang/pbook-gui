@@ -194,6 +194,16 @@ pub fn gui(data: &mut Vec<Category>,
     button_state_box.add(&enable_all_button);
     button_state_box.add(&disable_all_button);
     
+    let change_dir_button = gtk::Button::new_with_label("Change Directory");
+    let button_holder_box = gtk::Box::new(Orientation::Vertical, 10);
+    button_holder_box.pack_start(&change_dir_button, true, true, 0);
+    button_holder_box.pack_end(&button_state_box, true, true, 0);
+
+    change_dir_button.connect_clicked(move || {
+        let dialog = gtk::FileChooserDialog::new(Some("Change download directory"), None, gtk::FileChooserAction::SelectFolder);
+
+    });
+
     // NOTE: Still need to show in gui (toggle the cellrenderertoggles)
     // connect signals
     {
@@ -254,7 +264,7 @@ pub fn gui(data: &mut Vec<Category>,
     category_scroll.add(&categoryview);
 
     let category_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
-    category_box.pack_start(&button_state_box, false, false, 10);
+    category_box.pack_start(&button_holder_box, false, false, 10);
     category_box.pack_end(&category_scroll, true, true, 0);
 
     // holds both the category list and the info list
