@@ -17,12 +17,14 @@ pub enum DownloadUpdate {
 pub enum GuiCmdMsg {
     Add(u64, PathBuf),
     Remove(u64),
+    ChangeDir(PathBuf),
     Stop,
 }
 
 #[derive(Clone)]
 pub enum TpoolCmdMsg {
     Remove(u64),
+    ChangeDir(PathBuf),
     Stop,
 }
 

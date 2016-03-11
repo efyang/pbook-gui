@@ -209,6 +209,13 @@ impl CommHandler {
                     self.broadcast(TpoolCmdMsg::Remove(id)).ignore();
                 }
             }
+            GuiCmdMsg::ChangeDir(newdir) => {
+                // Copy over all of the finished downloads
+                // NOTE : FINISH THIS
+                
+                // broadcast to downloaders
+                self.broadcast(TpoolCmdMsg::ChangeDir(newdir)).ignore();
+            }
             GuiCmdMsg::Stop => {
                 self.broadcast(TpoolCmdMsg::Stop).ignore();
                 drop(self)

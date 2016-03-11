@@ -31,33 +31,33 @@ impl Downloader {
     pub fn new(download: Download,
                cmd_recv: Receiver<TpoolCmdMsg>,
                progress_send: Sender<TpoolProgressMsg>)
-        -> Downloader {
-            let dlname = download.name().to_owned();
-            let path = download.path().to_owned().join(name_to_fname(&dlname));
-            Downloader {
-                name: dlname.clone(),
-                url: download.url().to_owned(),
-                id: download.id(),
-                cmd_recv: cmd_recv,
-                progress_send: progress_send,
-                actualpath: path.clone(),
-                filepath: path.parent()
-                    .unwrap()
-                    .join(path.file_name()
+               -> Downloader {
+        let dlname = download.name().to_owned();
+        let path = download.path().to_owned().join(name_to_fname(&dlname));
+        Downloader {
+            name: dlname.clone(),
+            url: download.url().to_owned(),
+            id: download.id(),
+            cmd_recv: cmd_recv,
+            progress_send: progress_send,
+            actualpath: path.clone(),
+            filepath: path.parent()
                           .unwrap()
-                          .to_str()
-                          .unwrap()
-                          .to_owned() + ".tmp"),
-                          client: {
-                              let mut client = Client::new();
-                              client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
-                              client
-                          },
-                          stream: None,
-                          outfile: None,
-                          buffer: [0; 16],
-            }
+                          .join(path.file_name()
+                                    .unwrap()
+                                    .to_str()
+                                    .unwrap()
+                                    .to_owned() + ".tmp"),
+            client: {
+                let mut client = Client::new();
+                client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
+                client
+            },
+            stream: None,
+            outfile: None,
+            buffer: [0; 16],
         }
+    }
 
     pub fn begin(&mut self) -> Result<(), String> {
         if self.actualpath.exists() {
@@ -96,7 +96,9 @@ impl Downloader {
             // NOTE: Need to make dir before making file
 
             if let None = self.outfile {
-                if let Err(e) = create_dir_all(&self.filepath.parent().expect("No such dir parent")) {
+                if let Err(e) = create_dir_all(&self.filepath
+                                                    .parent()
+                                                    .expect("No such dir parent")) {
                     println!("dir creation error");
                     return Err(format!("{}", e));
                 }
@@ -155,6 +157,9 @@ impl Downloader {
                         return Err("stopped".to_owned());
                     }
                 }
+                TpoolCmdMsg::ChangeDir(newdir) => {
+                    self.change_path_dir(&newdir);
+                }
                 TpoolCmdMsg::Stop => {
                     return Err("stopped".to_owned());
                 }
@@ -169,7 +174,9 @@ impl Downloader {
                         outfile.flush().expect("Failed to flush to outfile");
                         drop(outfile);
                         rename(&self.filepath, &self.actualpath)
-                            .expect(&format!("Failed to rename tmp file: {:?} to {:?}", self.filepath, self.actualpath));
+                            .expect(&format!("Failed to rename tmp file: {:?} to {:?}",
+                                             self.filepath,
+                                             self.actualpath));
                         self.progress_send
                             .send((self.id, DownloadUpdate::Finished))
                             .expect("Failed to send message");
@@ -199,45 +206,45 @@ impl Downloader {
         Ok(())
     }
 
-    #[allow(dead_code)]
     fn send_message(&self, message: String) {
         self.progress_send
             .send((self.id, DownloadUpdate::Message(message)))
             .expect("Failed to send message");
     }
 
-    #[allow(dead_code)]
+    fn change_path_dir(&mut self, newdir: &Path) {
+        let current_filename = self.filepath.file_name().unwrap().to_owned();
+        let newpath = newdir.join(current_filename);
+        self.change_path(&newpath);
+    }
+
     fn change_path(&mut self, newpath: &Path) {
         if newpath != self.filepath {
+            let mut message = None;
             // preexisting outfile
             if let Some(ref mut outfile) = self.outfile {
                 // flush outfile
+                let mut flush_successful = true;
                 match outfile.flush() {
                     Ok(_) => {}
                     Err(e) => {
+                        flush_successful = false;
                         let error_msg = make_chdir_error(e, "flush");
-                        self.progress_send
-                            .send((self.id, DownloadUpdate::Message(error_msg)))
-                            .expect("Failed to send error");
-                        return;
+                        message = Some(error_msg);
                     }
                 }
-                // copy over the file
-                match copy(self.filepath.clone(), newpath) {
-                    Ok(_) => {
-                        self.filepath = newpath.to_path_buf();
-                        let finish_msg = "File copied successfully".to_owned();
-                        self.progress_send
-                            .send((self.id, DownloadUpdate::Message(finish_msg)))
-                            .expect("Failed to send copy finish");
-                    }
-                    Err(e) => {
-                        let error_msg = make_chdir_error(e, "copy");
-                        self.progress_send
-                            .send((self.id, DownloadUpdate::Message(error_msg)))
-                            .expect("Failed to send error");
-                        return;
-
+                if flush_successful {
+                    // copy over the file
+                    match copy(self.filepath.clone(), newpath) {
+                        Ok(_) => {
+                            self.filepath = newpath.to_path_buf();
+                            let finish_msg = "File copied successfully".to_owned();
+                            message = Some(finish_msg);
+                        }
+                        Err(e) => {
+                            let error_msg = make_chdir_error(e, "copy");
+                            message = Some(error_msg);
+                        }
                     }
                 }
             } else {
@@ -248,12 +255,14 @@ impl Downloader {
                     }
                     Err(e) => {
                         let error_msg = make_chdir_error(e, "fileopen");
-                        self.progress_send
-                            .send((self.id, DownloadUpdate::Message(error_msg)))
-                            .expect("Failed to send error");
-                        return;
+                        message = Some(error_msg);
                     }
                 }
+            }
+
+            // send any message
+            if let Some(msg) = message {
+                self.send_message(msg);
             }
         }
     }
