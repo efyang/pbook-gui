@@ -154,6 +154,14 @@ impl Download {
         self.download_info.is_some()
     }
 
+    pub fn finished(&self) -> bool {
+        if let Some(ref download_info) = self.download_info {
+            download_info.finished()
+        } else {
+            false
+        }
+    }
+
     pub fn path(&self) -> PathBuf {
         self.clone().download_info.unwrap().get_path()
     }
@@ -210,6 +218,7 @@ pub struct DownloadInfo {
     previous_progress: usize,
     recent_progress: usize,
     recent_progress_clear_time: f64,
+    finished: bool,
     elapsed: Duration,
     path: PathBuf,
 }
@@ -223,6 +232,7 @@ impl DownloadInfo {
             previous_progress: 0,
             recent_progress: 0,
             recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,
+            finished: false,
             elapsed: Duration::new(0, 0),
             path: PathBuf::new(),
         }
@@ -234,6 +244,9 @@ impl DownloadInfo {
         self.total
     }
 
+    pub fn finished(&self) -> bool {
+        self.finished
+    }
 
     pub fn get_path(&self) -> PathBuf {
         self.path.to_path_buf()
@@ -286,6 +299,7 @@ impl DownloadInfo {
     pub fn set_finished(&mut self) {
         self.recent_progress = 0;
         self.progress = self.total;
+        self.finished = true;
     }
 
     pub fn set_path(&mut self, path: PathBuf) {

@@ -213,7 +213,7 @@ pub fn gui(data: &mut Vec<Category>,
                                                      gtk::FileChooserAction::SelectFolder);
             dialog.add_buttons(&[("Select", gtk::ResponseType::Ok as i32),
                                  ("Cancel", gtk::ResponseType::Cancel as i32)]);
-            
+
             let default_dir = (*download_dir_ref.lock().unwrap()).to_owned();
             dialog.set_current_folder(default_dir.parent().unwrap());
             dialog.set_select_multiple(false);
@@ -275,7 +275,6 @@ pub fn gui(data: &mut Vec<Category>,
         disable_all_button.connect_clicked(move |_| {
             let download_dir_deref: PathBuf = (*download_dir_ref.lock().unwrap()).to_path_buf();
             for category in data.iter() {
-                let category_dir = download_dir_deref.join(name_to_dname(category.name()));
                 let downloads = category.downloads();
                 for download in downloads {
                     if let Err(e) = command_send_channel.send(GuiCmdMsg::Remove(download.id())) {

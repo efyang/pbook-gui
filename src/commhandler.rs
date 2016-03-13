@@ -5,10 +5,11 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use threadpool::ThreadPool;
 use downloader::*;
-use helper::Ignore;
+use helper::{Ignore, name_to_fname};
 use gui::update_gui;
 use time::precise_time_ns;
 use constants::GUI_UPDATE_TIME;
+use std::fs::{copy, remove_file};
 
 pub struct CommHandler {
     threadpool: ThreadPool,
@@ -211,8 +212,17 @@ impl CommHandler {
             }
             GuiCmdMsg::ChangeDir(newdir) => {
                 // Copy over all of the finished downloads
-                // NOTE : FINISH THIS
-                
+                for id in self.current_ids.iter() {
+                    let mut dl = self.data.get_mut(id).unwrap();
+                    if dl.finished() {
+                        let fname = name_to_fname(dl.name());
+                        let oldpath = dl.path().join(fname.to_owned());
+                        let newpath = newdir.to_owned().join(fname);
+                        copy(oldpath.clone(), newpath).expect("Failed to copy file");
+                        remove_file(oldpath).expect("Failed to remove file");
+                    }
+                    dl.set_path(newdir.to_owned());
+                }
                 // broadcast to downloaders
                 self.broadcast(TpoolCmdMsg::ChangeDir(newdir)).ignore();
             }

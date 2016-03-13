@@ -221,6 +221,7 @@ impl Downloader {
     fn change_path(&mut self, newpath: &Path) {
         if newpath != self.filepath {
             let mut message = None;
+            let mut open_outfile = false;
             // preexisting outfile
             if let Some(ref mut outfile) = self.outfile {
                 // flush outfile
@@ -246,6 +247,10 @@ impl Downloader {
                             message = Some(error_msg);
                         }
                     }
+
+                    open_outfile = true;
+
+
                 }
             } else {
                 // make the file
@@ -259,7 +264,18 @@ impl Downloader {
                     }
                 }
             }
-
+            // set outfile
+            if open_outfile {
+                match File::open(newpath) {
+                    Ok(f) => {
+                        self.outfile = Some(BufWriter::new(f));
+                    }
+                    Err(e) => {
+                        let error_msg = make_chdir_error(e, "fileopen");
+                        message = Some(error_msg);
+                    }
+                }
+            }
             // send any message
             if let Some(msg) = message {
                 self.send_message(msg);
