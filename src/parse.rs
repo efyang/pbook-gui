@@ -38,9 +38,9 @@ pub fn get_categories(vec_data: Vec<String>, title_identifier: char) -> Vec<Cate
                     if data.1.to_ascii_lowercase().contains("pdf") {
                         let dl;
                         if preexisting_titlecount > 0 {
-                            dl = Download::new(&format!("{} {}", &data.0, preexisting_titlecount), &data.1);
+                            dl = Download::new(&format!("{} {}", &data.0, preexisting_titlecount), &data.1, Some(category.name().to_owned()));
                         } else {
-                            dl = Download::new(&data.0, &data.1);
+                            dl = Download::new(&data.0, &data.1, Some(category.name().to_owned()));
                         }
                         category.add_download(dl);
                     }

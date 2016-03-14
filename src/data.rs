@@ -21,7 +21,7 @@ pub enum GuiCmdMsg {
     Stop,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum TpoolCmdMsg {
     Remove(u64),
     ChangeDir(PathBuf),
@@ -114,10 +114,11 @@ pub struct Download {
     enabled: bool,
     download_info: Option<DownloadInfo>, /* optional depending on whether
                                           * its currently being downloaded */
+    category_name: Option<String>,
 }
 
 impl Download {
-    pub fn new(name: &str, url: &str) -> Download {
+    pub fn new(name: &str, url: &str, category_name: Option<String>) -> Download {
         // id is siphash of name + url
         Download {
             id: get_hash_id(name, url),
@@ -125,6 +126,7 @@ impl Download {
             url: url.to_owned(),
             enabled: false,
             download_info: None,
+            category_name: category_name,
         }
     }
 
@@ -160,6 +162,10 @@ impl Download {
         } else {
             false
         }
+    }
+
+    pub fn category_name(&self) -> Option<String> {
+        self.category_name.clone()
     }
 
     pub fn path(&self) -> PathBuf {

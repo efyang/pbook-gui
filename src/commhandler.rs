@@ -224,7 +224,10 @@ impl CommHandler {
                     dl.set_path(newdir.to_owned());
                 }
                 // broadcast to downloaders
-                self.broadcast(TpoolCmdMsg::ChangeDir(newdir)).ignore();
+                if let Err(e) = self.broadcast(TpoolCmdMsg::ChangeDir(newdir)) {
+                    println!("desc: {:?}", e.description());
+                    println!("cause: {:?}", e.cause())
+                }
             }
             GuiCmdMsg::Stop => {
                 self.broadcast(TpoolCmdMsg::Stop).ignore();

@@ -9,14 +9,14 @@ use hyper::client::response::Response;
 use hyper::header::ContentLength;
 use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
-use helper::name_to_fname;
+use helper::{name_to_fname, name_to_dname};
 use std::fs::metadata;
 
 pub struct Downloader {
     name: String,
     url: String,
     id: u64,
-    // download_path: PathBuf,
+    category_name: Option<String>,
     cmd_recv: Receiver<TpoolCmdMsg>,
     progress_send: Sender<TpoolProgressMsg>,
     actualpath: PathBuf,
@@ -38,6 +38,7 @@ impl Downloader {
             name: dlname.clone(),
             url: download.url().to_owned(),
             id: download.id(),
+            category_name: download.category_name().clone(),
             cmd_recv: cmd_recv,
             progress_send: progress_send,
             actualpath: path.clone(),
@@ -214,7 +215,15 @@ impl Downloader {
 
     fn change_path_dir(&mut self, newdir: &Path) {
         let current_filename = self.filepath.file_name().unwrap().to_owned();
-        let newpath = newdir.join(current_filename);
+        let newpath;
+        if let Some(ref category) = self.category_name {
+            let category_dir = newdir.join(name_to_dname(category));
+            create_dir_all(&category_dir).expect("Failed to create dir");
+            newpath = category_dir.join(current_filename);
+        } else {
+            newpath = newdir.join(current_filename);
+        }
+        println!("newpath: {:?}", newpath);
         self.change_path(&newpath);
     }
 
