@@ -220,6 +220,7 @@ impl Downloader {
 
     fn change_path(&mut self, newpath: &Path) {
         if newpath != self.filepath {
+            // REFACTOR THIS LATER
             let mut message = None;
             let mut open_outfile = false;
             // preexisting outfile

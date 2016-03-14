@@ -9,7 +9,8 @@ This project aims to provide a gui to allow users to select and download files f
     - adequate directory structure ☑
     - fairly easily themable ☑
     - swappable themes while in gui ☐
-    - button to enable all ☐
+    - button to enable all ☑
+    - button to disable all ☑
     - categories on side ☑
     - list of downloads ☑
         - name ☑
