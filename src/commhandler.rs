@@ -5,11 +5,12 @@ use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use threadpool::ThreadPool;
 use downloader::*;
-use helper::{Ignore, name_to_fname};
+use helper::{Ignore, name_to_fname, name_to_dname};
 use gui::update_gui;
 use time::precise_time_ns;
 use constants::GUI_UPDATE_TIME;
 use std::fs::{copy, remove_file};
+use std::ffi::OsStr;
 
 pub struct CommHandler {
     threadpool: ThreadPool,
@@ -40,29 +41,29 @@ impl CommHandler {
     pub fn new(basethreads: usize,
                start_data: Vec<Download>,
                guichannels: (Sender<GuiUpdateMsg>, Receiver<GuiCmdMsg>))
-        -> CommHandler {
-            let (progress_s, progress_r) = channel();
-            let mut id_data_hm = HashMap::new();
-            for download in start_data.iter() {
-                id_data_hm.insert(download.id(), download.clone());
-            }
-            CommHandler {
-                threadpool: ThreadPool::new(basethreads),
-                max_threads: Arc::new(Mutex::new(basethreads)),
-                current_threads: Arc::new(Mutex::new(0)),
-                data: id_data_hm,
-                current_ids: Vec::new(),
-                jobs: Vec::new(),
-                datacache: HashMap::new(),
-                pending_changes: Vec::new(),
-                gui_update_send: guichannels.0,
-                gui_cmd_recv: guichannels.1,
-                threadpool_progress_recv: progress_r,
-                threadpool_progress_send: progress_s,
-                threadpool_cmd_send: Vec::new(),
-                next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
-            }
+               -> CommHandler {
+        let (progress_s, progress_r) = channel();
+        let mut id_data_hm = HashMap::new();
+        for download in start_data.iter() {
+            id_data_hm.insert(download.id(), download.clone());
         }
+        CommHandler {
+            threadpool: ThreadPool::new(basethreads),
+            max_threads: Arc::new(Mutex::new(basethreads)),
+            current_threads: Arc::new(Mutex::new(0)),
+            data: id_data_hm,
+            current_ids: Vec::new(),
+            jobs: Vec::new(),
+            datacache: HashMap::new(),
+            pending_changes: Vec::new(),
+            gui_update_send: guichannels.0,
+            gui_cmd_recv: guichannels.1,
+            threadpool_progress_recv: progress_r,
+            threadpool_progress_send: progress_s,
+            threadpool_cmd_send: Vec::new(),
+            next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
+        }
+    }
 
     pub fn update(&mut self) {
         // handle gui cmd
@@ -147,7 +148,7 @@ impl CommHandler {
                 let mut download = self.data.get_mut(&id).unwrap();
                 if download.downloading() {
                     download.increment_progress(*self.datacache.get(&id).unwrap_or(&0))
-                        .unwrap();
+                            .unwrap();
                     // add to pending changes
                     self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
                 }
@@ -170,6 +171,7 @@ impl CommHandler {
     fn handle_gui_cmd(&mut self, cmd: GuiCmdMsg) {
         match cmd {
             GuiCmdMsg::Add(id, path) => {
+                println!("{:?}", path);
                 let mut download = self.data.get_mut(&id).unwrap();
                 download.start_download();
                 download.set_enable_state(true);
@@ -217,17 +219,41 @@ impl CommHandler {
                     if dl.finished() {
                         let fname = name_to_fname(dl.name());
                         let oldpath = dl.path().join(fname.to_owned());
-                        let newpath = newdir.to_owned().join(fname);
-                        copy(oldpath.clone(), newpath).expect("Failed to copy file");
-                        remove_file(oldpath).expect("Failed to remove file");
+                        let newpath;
+                        if let Some(ref category_name) = dl.category_name() {
+                            newpath = newdir.to_owned()
+                                            .join(name_to_dname(category_name))
+                                            .join(fname);
+                        } else {
+                            newpath = newdir.to_owned()
+                                            .join(fname);
+                        }
+                        // if the copy is failed then it has already been renamed; ignore this
+                        // TODO: make this use coroutines/threads to minimize update lag
+                        copy(oldpath.clone(), newpath).expect("Copy fail");
+                        remove_file(oldpath).expect("Remove fail");
                     }
                     dl.set_path(newdir.to_owned());
                 }
-                // broadcast to downloaders
-                if let Err(e) = self.broadcast(TpoolCmdMsg::ChangeDir(newdir)) {
-                    println!("desc: {:?}", e.description());
-                    println!("cause: {:?}", e.cause())
+                // change all of the pending jobs to the new path
+                for job in self.jobs.iter_mut() {
+                    let current_path = job.path();
+                    let category_name = job.category_name();
+                    let backup_fname = name_to_fname(job.name());
+                    let current_fname = current_path.file_name()
+                                                    .unwrap_or(OsStr::new(&backup_fname));
+                    let newpath;
+                    if let Some(category) = category_name {
+                        newpath = newdir.to_owned()
+                                        .join(name_to_dname(&category))
+                                        .join(current_fname);
+                    } else {
+                        newpath = newdir.to_owned().join(current_fname);
+                    }
+                    job.set_path(newpath);
                 }
+                // broadcast to downloaders
+                self.broadcast(TpoolCmdMsg::ChangeDir(newdir)).ignore();
             }
             GuiCmdMsg::Stop => {
                 self.broadcast(TpoolCmdMsg::Stop).ignore();

@@ -233,9 +233,11 @@ impl Downloader {
             let mut message = None;
             let mut open_outfile = false;
             // preexisting outfile
+            let mut is_some = false;
+            let mut flush_successful = true;
             if let Some(ref mut outfile) = self.outfile {
                 // flush outfile
-                let mut flush_successful = true;
+                is_some = true;
                 match outfile.flush() {
                     Ok(_) => {}
                     Err(e) => {
@@ -244,6 +246,23 @@ impl Downloader {
                         message = Some(error_msg);
                     }
                 }
+                
+            } else {
+                // make the file
+                match File::create(newpath) {
+                    Ok(f) => {
+                        self.outfile = Some(BufWriter::new(f));
+                        self.filepath = newpath.to_path_buf();
+                    }
+                    Err(e) => {
+                        let error_msg = make_chdir_error(e, "fileopen");
+                        message = Some(error_msg);
+                    }
+                }
+            }
+
+            if is_some {
+                self.outfile = None;
                 if flush_successful {
                     // copy over the file
                     match copy(self.filepath.clone(), newpath) {
@@ -259,19 +278,6 @@ impl Downloader {
                     }
 
                     open_outfile = true;
-
-
-                }
-            } else {
-                // make the file
-                match File::create(newpath) {
-                    Ok(f) => {
-                        self.outfile = Some(BufWriter::new(f));
-                    }
-                    Err(e) => {
-                        let error_msg = make_chdir_error(e, "fileopen");
-                        message = Some(error_msg);
-                    }
                 }
             }
             // set outfile
