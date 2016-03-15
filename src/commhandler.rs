@@ -9,7 +9,7 @@ use helper::{Ignore, name_to_fname, name_to_dname};
 use gui::update_gui;
 use time::precise_time_ns;
 use constants::GUI_UPDATE_TIME;
-use std::fs::{copy, remove_file};
+use std::fs::{copy, remove_file, create_dir_all};
 use std::ffi::OsStr;
 
 pub struct CommHandler {
@@ -95,7 +95,9 @@ impl CommHandler {
         let max_threads = self.max_threads.lock().unwrap().clone();
         let current_threads = self.current_threads.lock().unwrap().clone();
         if !self.jobs.is_empty() && (max_threads - current_threads) > 0 {
+            // use VecDeque instead to remove from beginning of list
             let job = self.jobs.pop().unwrap();
+            println!("{:?}", job.path());
             let progress_sender = self.threadpool_progress_send.clone();
             let (tchan_cmd_s, tchan_cmd_r) = channel();
             self.threadpool_cmd_send.push(tchan_cmd_s);
@@ -171,7 +173,6 @@ impl CommHandler {
     fn handle_gui_cmd(&mut self, cmd: GuiCmdMsg) {
         match cmd {
             GuiCmdMsg::Add(id, path) => {
-                println!("{:?}", path);
                 let mut download = self.data.get_mut(&id).unwrap();
                 download.start_download();
                 download.set_enable_state(true);
@@ -221,16 +222,17 @@ impl CommHandler {
                         let oldpath = dl.path().join(fname.to_owned());
                         let newpath;
                         if let Some(ref category_name) = dl.category_name() {
-                            newpath = newdir.to_owned()
-                                            .join(name_to_dname(category_name))
-                                            .join(fname);
+                            let category_dir = newdir.to_owned()
+                                .join(name_to_dname(category_name));
+                            create_dir_all(&category_dir).expect("Failed to create dir");
+                            newpath = category_dir.join(fname);
                         } else {
                             newpath = newdir.to_owned()
                                             .join(fname);
                         }
                         // if the copy is failed then it has already been renamed; ignore this
                         // TODO: make this use coroutines/threads to minimize update lag
-                        copy(oldpath.clone(), newpath).expect("Copy fail");
+                        copy(oldpath.clone(), newpath.clone()).expect(&format!("Copy fail {:?} -> {:?} Download: {:#?}", oldpath.clone(), newpath.clone(), dl));
                         remove_file(oldpath).expect("Remove fail");
                     }
                     dl.set_path(newdir.to_owned());

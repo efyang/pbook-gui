@@ -9,7 +9,7 @@ use hyper::client::response::Response;
 use hyper::header::ContentLength;
 use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
-use helper::{name_to_fname, name_to_dname};
+use helper::{name_to_fname, name_to_dname, Ignore};
 use std::fs::metadata;
 
 pub struct Downloader {
@@ -180,7 +180,8 @@ impl Downloader {
                                              self.actualpath));
                         self.progress_send
                             .send((self.id, DownloadUpdate::Finished))
-                            .expect("Failed to send message");
+                            //.expect("Failed to send message");
+                            .ignore();
                         return Err("finished".to_owned());
                     }
                     Ok(n) => {
@@ -188,7 +189,8 @@ impl Downloader {
                         outfile.write(&self.buffer[..n]).expect("IO write error");
                         self.progress_send
                             .send((self.id, DownloadUpdate::Amount(n)))
-                            .expect("Failed to send message");
+                            //.expect("Failed to send message");
+                            .ignore();
                     }
                     Err(e) => {
                         // Some error
