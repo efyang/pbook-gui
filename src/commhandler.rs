@@ -2,7 +2,7 @@ use data::*;
 use std::sync::mpsc::{channel, Sender, Receiver, SendError};
 use std::error::Error;
 use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use threadpool::ThreadPool;
 use downloader::*;
 use helper::{Ignore, name_to_fname, name_to_dname};
@@ -21,7 +21,8 @@ pub struct CommHandler {
     data: HashMap<u64, Download>,
     // list of all ids
     current_ids: Vec<u64>,
-    jobs: Vec<Download>,
+    //jobs: Vec<Download>,
+    jobs: VecDeque<Download>,
     // download id, amount of bytes to add
     datacache: HashMap<u64, usize>,
     // pending changes
@@ -53,7 +54,8 @@ impl CommHandler {
             current_threads: Arc::new(Mutex::new(0)),
             data: id_data_hm,
             current_ids: Vec::new(),
-            jobs: Vec::new(),
+            //jobs: Vec::new(),
+            jobs: VecDeque::new(), // FIFO queue
             datacache: HashMap::new(),
             pending_changes: Vec::new(),
             gui_update_send: guichannels.0,
@@ -95,8 +97,7 @@ impl CommHandler {
         let max_threads = self.max_threads.lock().unwrap().clone();
         let current_threads = self.current_threads.lock().unwrap().clone();
         if !self.jobs.is_empty() && (max_threads - current_threads) > 0 {
-            // use VecDeque instead to remove from beginning of list
-            let job = self.jobs.pop().unwrap();
+            let job = self.jobs.pop_front().unwrap();
             println!("{:?}", job.path());
             let progress_sender = self.threadpool_progress_send.clone();
             let (tchan_cmd_s, tchan_cmd_r) = channel();
@@ -178,7 +179,7 @@ impl CommHandler {
                 download.set_enable_state(true);
                 download.set_path(path);
                 // add to jobs
-                self.jobs.push(download.clone());
+                self.jobs.push_back(download.clone());
                 self.current_ids.push(id);
                 // add to pending changes
                 self.pending_changes.push(GuiChange::Add(download.to_owned()));
