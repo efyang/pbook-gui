@@ -28,6 +28,8 @@ mod gtkdef;
 mod cellrenderers;
 mod theme;
 mod constants;
+#[allow(unused_variables, unused_imports, dead_code)]
+mod fsthread;
 
 use commhandler::*;
 use parse::*;
