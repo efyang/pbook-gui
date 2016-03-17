@@ -9,8 +9,9 @@ use helper::{Ignore, name_to_fname, name_to_dname};
 use gui::update_gui;
 use time::precise_time_ns;
 use constants::GUI_UPDATE_TIME;
-use std::fs::{copy, remove_file, create_dir_all};
+use std::fs::create_dir_all;
 use std::ffi::OsStr;
+use fsthread::*;
 
 pub struct CommHandler {
     threadpool: ThreadPool,
@@ -21,7 +22,7 @@ pub struct CommHandler {
     data: HashMap<u64, Download>,
     // list of all ids
     current_ids: Vec<u64>,
-    //jobs: Vec<Download>,
+    // jobs: Vec<Download>,
     jobs: VecDeque<Download>,
     // download id, amount of bytes to add
     datacache: HashMap<u64, usize>,
@@ -34,6 +35,8 @@ pub struct CommHandler {
     // how to determine whether a thread is done?
     threadpool_progress_recv: Receiver<TpoolProgressMsg>,
     threadpool_progress_send: Sender<TpoolProgressMsg>,
+    fsthread_send: Sender<FsCommand>,
+    fsthread_recv: Receiver<FsUpdate>,
     threadpool_cmd_send: Vec<Sender<TpoolCmdMsg>>,
     next_gui_update_t: u64,
 }
@@ -48,13 +51,13 @@ impl CommHandler {
         for download in start_data.iter() {
             id_data_hm.insert(download.id(), download.clone());
         }
+        let (fsthread_send, fsthread_recv) = FsThread::spawn();
         CommHandler {
             threadpool: ThreadPool::new(basethreads),
             max_threads: Arc::new(Mutex::new(basethreads)),
             current_threads: Arc::new(Mutex::new(0)),
             data: id_data_hm,
             current_ids: Vec::new(),
-            //jobs: Vec::new(),
             jobs: VecDeque::new(), // FIFO queue
             datacache: HashMap::new(),
             pending_changes: Vec::new(),
@@ -62,6 +65,8 @@ impl CommHandler {
             gui_cmd_recv: guichannels.1,
             threadpool_progress_recv: progress_r,
             threadpool_progress_send: progress_s,
+            fsthread_send: fsthread_send,
+            fsthread_recv: fsthread_recv,
             threadpool_cmd_send: Vec::new(),
             next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
         }
@@ -169,6 +174,12 @@ impl CommHandler {
             self.next_gui_update_t = current_time + GUI_UPDATE_TIME;
             update_gui()
         }
+
+        // check fsthread updates
+        match self.fsthread_recv.try_recv() {
+            Ok(update) => self.handle_fsthread_update(update),
+            Err(_) => {}
+        }
     }
 
     fn handle_gui_cmd(&mut self, cmd: GuiCmdMsg) {
@@ -224,7 +235,7 @@ impl CommHandler {
                         let newpath;
                         if let Some(ref category_name) = dl.category_name() {
                             let category_dir = newdir.to_owned()
-                                .join(name_to_dname(category_name));
+                                                     .join(name_to_dname(category_name));
                             create_dir_all(&category_dir).expect("Failed to create dir");
                             newpath = category_dir.join(fname);
                         } else {
@@ -233,8 +244,18 @@ impl CommHandler {
                         }
                         // if the copy is failed then it has already been renamed; ignore this
                         // TODO: make this use coroutines/threads to minimize update lag
-                        copy(oldpath.clone(), newpath.clone()).expect(&format!("Copy fail {:?} -> {:?} Download: {:#?}", oldpath.clone(), newpath.clone(), dl));
-                        remove_file(oldpath).expect("Remove fail");
+                        self.fsthread_send
+                            .send(FsCommand::Copy(oldpath.clone(), newpath.clone()))
+                            .expect("FsThread send fail");
+                        // copy(oldpath.clone(), newpath.clone())
+                        // .expect(&format!("Copy fail {:?} -> {:?} Download: {:#?}",
+                        // oldpath.clone(),
+                        // newpath.clone(),
+                        // dl));
+                        self.fsthread_send
+                            .send(FsCommand::Remove(oldpath))
+                            .expect("FsThread send fail");
+                        // remove_file(oldpath).expect("Remove fail");
                     }
                     dl.set_path(newdir.to_owned());
                 }
@@ -260,6 +281,7 @@ impl CommHandler {
             }
             GuiCmdMsg::Stop => {
                 self.broadcast(TpoolCmdMsg::Stop).ignore();
+                self.fsthread_send.send(FsCommand::Stop).ignore();
                 drop(self)
             }
         }
@@ -314,6 +336,12 @@ impl CommHandler {
             }
         }
         Ok(())
+    }
+
+    fn handle_fsthread_update(&self, update: FsUpdate) {
+        match update {
+            FsUpdate::Error(msg) => println!("FsThread error: {}", msg),
+        }
     }
 }
 
