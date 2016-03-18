@@ -14,7 +14,7 @@ This project aims to provide a gui to allow users to select and download files f
     - categories on side ☑
     - list of downloads ☑
         - name ☑
-            - ellipsized (needs PR) ☐
+            - ellipsized (needs PR) ☑
         - progress bar ☑
         - ETA ☑
         - speed (use XiB notation) ☑
