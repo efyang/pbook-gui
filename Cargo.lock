@@ -189,7 +189,7 @@ dependencies = [
 [[package]]
 name = "gtk"
 version = "0.0.7"
-source = "git+https://github.com/gtk-rs/gtk#df457a9b2e9b56245b4d403b02c80077cbe8e25b"
+source = "git+https://github.com/gtk-rs/gtk#8756e3df67a065a84659759306985863a15c7e97"
 dependencies = [
  "cairo-rs 0.0.8 (git+https://github.com/gtk-rs/cairo)",
  "cairo-sys-rs 0.3.0 (git+https://github.com/gtk-rs/cairo)",

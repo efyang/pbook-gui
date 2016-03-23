@@ -6,11 +6,12 @@ use time;
 use helper::{minimum, maximum, make_string_if_nonzero};
 use constants::DOWNLOAD_SPEED_UPDATE_TIME;
 use std::{i32, i64};
-
+// refactor TpoolProgressMsg to just be a DownloadUpdate
 pub enum DownloadUpdate {
     Message(String),
     Amount(usize),
     SetSize(usize),
+    Panicked(String),
     Finished,
 }
 
@@ -37,7 +38,7 @@ pub enum GuiChange {
     Remove(usize), // idx
     Add(Download), // download
     Set(usize, Download), // idx, download
-    Panicked(Option<u64>), // id -- work on this
+    Panicked(bool, String), // id -- work on this
 }
 
 // pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;

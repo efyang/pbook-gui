@@ -270,10 +270,8 @@ pub fn gui(data: &mut Vec<Category>,
     {
         let command_send_channel = command_send_channel.clone();
         let data = data.to_owned();
-        let download_dir_ref = download_dir_ref.clone();
         let category_store = category_store.clone();
         disable_all_button.connect_clicked(move |_| {
-            let download_dir_deref: PathBuf = (*download_dir_ref.lock().unwrap()).to_path_buf();
             for category in data.iter() {
                 let downloads = category.downloads();
                 for download in downloads {
@@ -378,9 +376,16 @@ fn update_local() -> Continue {
                             let values = download_to_values(&download).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
-                        &GuiChange::Panicked(oid) => {
-                            if let Some(id) = oid {
+                        &GuiChange::Panicked(is_downloader, ref error) => {
+                            if is_downloader {
                                 // download specific fail
+                                let dialog = gtk::MessageDialog::new(None::<&gtk::Window>, 
+                                                                     gtk::DialogFlags::empty(),
+                                                                     gtk::MessageType::Error,
+                                                                     gtk::ButtonsType::None,
+                                                                     &("Error: \n".to_string() + error));
+                                dialog.run();
+                                dialog.destroy();
                             } else {
                                 // commhandler fail
                                 gtk::main_quit();

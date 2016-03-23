@@ -103,7 +103,6 @@ impl CommHandler {
         let current_threads = self.current_threads.lock().unwrap().clone();
         if !self.jobs.is_empty() && (max_threads - current_threads) > 0 {
             let job = self.jobs.pop_front().unwrap();
-            println!("{:?}", job.path());
             let progress_sender = self.threadpool_progress_send.clone();
             let (tchan_cmd_s, tchan_cmd_r) = channel();
             self.threadpool_cmd_send.push(tchan_cmd_s);
@@ -117,12 +116,11 @@ impl CommHandler {
                         Ok(_) => {}
                         Err(e) => {
                             *current_threads.lock().unwrap() -= 1;
+                            keep_downloading = false;
                             match &e as &str {
-                                "finished" => {
-                                    keep_downloading = false;
-                                }
+                                "finished" => {}
                                 _ => {
-                                    panic!(e);
+                                    downloader.send_panicked(e.to_owned());
                                 }
                             }
                         }
@@ -136,7 +134,7 @@ impl CommHandler {
                                 match &e as &str {
                                     "finished" | "stopped" => {}
                                     _ => {
-                                        println!("{}", e);
+                                        downloader.send_panicked(e.to_owned());
                                     }
                                 }
                             }
@@ -325,6 +323,12 @@ impl CommHandler {
             DownloadUpdate::Message(msg) => {
                 println!("{}", msg);
             }
+            DownloadUpdate::Panicked(error) => {
+                let ref download = self.data[&id];
+                let mut newerr = download.name().to_owned() + ": ";
+                newerr.push_str(&error);
+                self.pending_changes.push(GuiChange::Panicked(true, newerr));
+            }
         }
     }
 
@@ -338,9 +342,11 @@ impl CommHandler {
         Ok(())
     }
 
-    fn handle_fsthread_update(&self, update: FsUpdate) {
+    fn handle_fsthread_update(&mut self, update: FsUpdate) {
         match update {
-            FsUpdate::Error(msg) => println!("FsThread error: {}", msg),
+            FsUpdate::Error(msg) => {
+                self.pending_changes.push(GuiChange::Panicked(true, format!("FsThread error: {}", msg)));
+            },
         }
     }
 }
