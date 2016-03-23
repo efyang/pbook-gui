@@ -9,7 +9,7 @@ build = "build/build.rs"
 
 [dependencies]
 threadpool = "0.2.1"
-hyper = "0.7.2"
+hyper = {git = "https://github.com/hyperium/hyper", branch = "mio"}
 gtk = {git = "https://github.com/gtk-rs/gtk"}
 gtk-sys = {git = "https://github.com/gtk-rs/sys"}
 glib = {git = "https://github.com/gtk-rs/glib"}
