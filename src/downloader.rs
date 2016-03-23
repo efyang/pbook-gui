@@ -31,34 +31,34 @@ impl Downloader {
     pub fn new(download: Download,
                cmd_recv: Receiver<TpoolCmdMsg>,
                progress_send: Sender<TpoolProgressMsg>)
-               -> Downloader {
-        let dlname = download.name().to_owned();
-        let path = download.path().to_owned().join(name_to_fname(&dlname));
-        Downloader {
-            name: dlname.clone(),
-            url: download.url().to_owned(),
-            id: download.id(),
-            category_name: download.category_name().clone(),
-            cmd_recv: cmd_recv,
-            progress_send: progress_send,
-            actualpath: path.clone(),
-            filepath: path.parent()
+        -> Downloader {
+            let dlname = download.name().to_owned();
+            let path = download.path().to_owned().join(name_to_fname(&dlname));
+            Downloader {
+                name: dlname.clone(),
+                url: download.url().to_owned(),
+                id: download.id(),
+                category_name: download.category_name().clone(),
+                cmd_recv: cmd_recv,
+                progress_send: progress_send,
+                actualpath: path.clone(),
+                filepath: path.parent()
+                    .unwrap()
+                    .join(path.file_name()
                           .unwrap()
-                          .join(path.file_name()
-                                    .unwrap()
-                                    .to_str()
-                                    .unwrap()
-                                    .to_owned() + ".tmp"),
-            client: {
-                let mut client = Client::new();
-                client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
-                client
-            },
-            stream: None,
-            outfile: None,
-            buffer: [0; 16],
+                          .to_str()
+                          .unwrap()
+                          .to_owned() + ".tmp"),
+                          client: {
+                              let mut client = Client::new();
+                              client.set_read_timeout(Some(Duration::from_millis(CONNECT_MILLI_TIMEMOUT)));
+                              client
+                          },
+                          stream: None,
+                          outfile: None,
+                          buffer: [0; 16],
+            }
         }
-    }
 
     pub fn begin(&mut self) -> Result<(), String> {
         if self.actualpath.exists() {
@@ -98,8 +98,8 @@ impl Downloader {
 
             if let None = self.outfile {
                 if let Err(e) = create_dir_all(&self.filepath
-                                                    .parent()
-                                                    .expect("No such dir parent")) {
+                                               .parent()
+                                               .expect("No such dir parent")) {
                     println!("dir creation error");
                     return Err(format!("{}", e));
                 }
@@ -195,11 +195,11 @@ impl Downloader {
                     Err(e) => {
                         // Some error
                         if e.kind() != ErrorKind::WouldBlock {
-                            println!("Error Type: {:?}", e.kind());
-                            println!("Name: {}", self.name);
-                            println!("Url: {}", self.url);
-                            println!("Error: {:?}", e.into_inner());
-                            return Err("Downloader Error".to_owned());
+                            //println!("Error Type: {:?}", e.kind());
+                            //println!("Name: {}", self.name);
+                            //println!("Url: {}", self.url);
+                            //println!("Error: {:?}", e.into_inner());
+                            return Err(format!("Error: {:?} - {:?}", e.kind(), e.into_inner()));
                         }
                     }
                 }
@@ -248,7 +248,7 @@ impl Downloader {
                         message = Some(error_msg);
                     }
                 }
-                
+
             } else {
                 // make the file
                 match File::create(newpath) {
