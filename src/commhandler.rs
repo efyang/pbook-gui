@@ -117,12 +117,12 @@ impl CommHandler {
                         Ok(_) => {}
                         Err(e) => {
                             *current_threads.lock().unwrap() -= 1;
+                            keep_downloading = false;
                             match &e as &str {
-                                "finished" => {
-                                    keep_downloading = false;
-                                }
+                                "finished" => {}
                                 _ => {
-                                    panic!(e);
+                                    downloader.send_panicked(e.to_owned());
+                                    println!("{}", e);
                                 }
                             }
                         }
@@ -136,6 +136,7 @@ impl CommHandler {
                                 match &e as &str {
                                     "finished" | "stopped" => {}
                                     _ => {
+                                        downloader.send_panicked(e.to_owned());
                                         println!("{}", e);
                                     }
                                 }
@@ -324,6 +325,9 @@ impl CommHandler {
             }
             DownloadUpdate::Message(msg) => {
                 println!("{}", msg);
+            }
+            DownloadUpdate::Panicked(error) => {
+                self.pending_changes.push(GuiChange::Panicked(Some(id), error))
             }
         }
     }

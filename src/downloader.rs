@@ -13,7 +13,6 @@ use helper::{name_to_fname, name_to_dname, Ignore};
 use std::fs::metadata;
 
 pub struct Downloader {
-    name: String,
     url: String,
     id: u64,
     category_name: Option<String>,
@@ -35,10 +34,9 @@ impl Downloader {
             let dlname = download.name().to_owned();
             let path = download.path().to_owned().join(name_to_fname(&dlname));
             Downloader {
-                name: dlname.clone(),
                 url: download.url().to_owned(),
                 id: download.id(),
-                category_name: download.category_name().clone(),
+                category_name: download.category_name().to_owned(),
                 cmd_recv: cmd_recv,
                 progress_send: progress_send,
                 actualpath: path.clone(),
@@ -299,6 +297,10 @@ impl Downloader {
                 self.send_message(msg);
             }
         }
+    }
+
+    pub fn send_panicked(&self, e: String) {
+        self.progress_send.send((self.id, DownloadUpdate::Panicked(e))).ignore();
     }
 }
 
