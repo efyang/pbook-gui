@@ -118,7 +118,7 @@ impl Downloader {
 
     pub fn get_url(&mut self, tries: usize, maxtries: usize) -> Result<(), String> {
         if tries >= maxtries {
-            return Err("Over try limit".to_owned());
+            return Err(format!("Over connection try limit of {}.", maxtries));
         } else {
             if let None = self.stream {
                 match self.client.get(&self.url).send() {
@@ -131,8 +131,6 @@ impl Downloader {
                             if ioerr.kind() == ErrorKind::WouldBlock {
                                 return self.get_url(tries, maxtries);
                             } else {
-                                println!("{:?}", ioerr.kind());
-                                println!("geterror");
                                 return self.get_url(tries + 1, maxtries);
                             }
                         } else {
@@ -193,11 +191,13 @@ impl Downloader {
                     Err(e) => {
                         // Some error
                         if e.kind() != ErrorKind::WouldBlock {
-                            //println!("Error Type: {:?}", e.kind());
-                            //println!("Name: {}", self.name);
-                            //println!("Url: {}", self.url);
-                            //println!("Error: {:?}", e.into_inner());
-                            return Err(format!("Error: {:?} - {:?}", e.kind(), e.into_inner()));
+                            let kind = e.kind();
+                            let error = e.into_inner().unwrap();
+                            if "StringError(\"early eof\")" == &format!("{}", error) {
+                                return Err(format!("Error: \n{:?} - {:?}", kind, "connection dropped - try redownloading the file."));
+                            } else {
+                                return Err(format!("Error: \n{:?} - {:?}", kind, error));
+                            }
                         }
                     }
                 }
