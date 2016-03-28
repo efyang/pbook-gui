@@ -376,9 +376,10 @@ fn update_local() -> Continue {
                             let values = download_to_values(&download).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
-                        &GuiChange::Panicked(oid, ref error) => {
-                            if let Some(id) = oid {
+                        &GuiChange::Panicked(is_downloader, ref error) => {
+                            if is_downloader {
                                 // download specific fail
+                                let dialog = gtk::Dialog::new();
                                 println!("{}", error);
                             } else {
                                 // commhandler fail

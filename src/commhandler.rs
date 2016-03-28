@@ -327,7 +327,10 @@ impl CommHandler {
                 println!("{}", msg);
             }
             DownloadUpdate::Panicked(error) => {
-                self.pending_changes.push(GuiChange::Panicked(Some(id), error))
+                let ref download = self.data[&id];
+                let mut newerr = download.name().to_owned() + ": ";
+                newerr.push_str(&error);
+                self.pending_changes.push(GuiChange::Panicked(true, newerr));
             }
         }
     }

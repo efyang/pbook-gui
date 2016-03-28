@@ -38,7 +38,7 @@ pub enum GuiChange {
     Remove(usize), // idx
     Add(Download), // download
     Set(usize, Download), // idx, download
-    Panicked(Option<u64>, String), // id -- work on this
+    Panicked(bool, String), // id -- work on this
 }
 
 // pub type GuiUpdateMsg = Vec<(String, Option<u64>, Option<usize>, Option<Download>)>;
