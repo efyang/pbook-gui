@@ -379,8 +379,13 @@ fn update_local() -> Continue {
                         &GuiChange::Panicked(is_downloader, ref error) => {
                             if is_downloader {
                                 // download specific fail
-                                let dialog = gtk::Dialog::new();
-                                println!("{}", error);
+                                let dialog = gtk::MessageDialog::new(None::<&gtk::Window>, 
+                                                                     gtk::DialogFlags::empty(),
+                                                                     gtk::MessageType::Error,
+                                                                     gtk::ButtonsType::None,
+                                                                     &("Error: \n".to_string() + error));
+                                dialog.run();
+                                dialog.destroy();
                             } else {
                                 // commhandler fail
                                 gtk::main_quit();
