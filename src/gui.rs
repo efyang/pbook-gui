@@ -16,6 +16,7 @@ use theme::*;
 use constants::{DEFAULT_GTK_CSS_CONFIG, SECONDARY_GTK_CSS_CONFIG};
 use include::RAW_ICON;
 use gdk_pixbuf::PixbufLoader;
+use button::*;
 
 pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<GuiUpdateMsg>,
@@ -33,7 +34,7 @@ pub fn gui(data: &mut Vec<Category>,
         }
     };
     let current_working_dir = current_exe_path.parent()
-                                              .unwrap_or(Path::new(".."));
+        .unwrap_or(Path::new(".."));
     let default_config_path = current_working_dir.join(DEFAULT_GTK_CSS_CONFIG);
     let secondary_config_path = current_working_dir.join(SECONDARY_GTK_CSS_CONFIG);
 
@@ -81,6 +82,21 @@ pub fn gui(data: &mut Vec<Category>,
 
     downloadview.set_model(Some(&download_store));
     downloadview.set_headers_visible(true);
+
+    // add right click context menu for downloads
+    {
+        downloadview.connect_button_release_event(|ref treeview, ref ebutton| {
+            if is_right_click(*ebutton) {
+                let (x, y) = ebutton.get_position();
+                let time = ebutton.get_time();
+                if let Some((Some(path), Some(col), _, _)) = treeview.get_path_at_pos(x as i32, y as i32) {
+                    treeview.grab_focus();
+                    treeview.set_cursor(path, Some(col), false);
+                }
+            }
+            Inhibit(false)
+        });
+    }
 
     // Setup TLS
     GTK_GLOBAL.with(move |gtk_global| {
@@ -152,8 +168,8 @@ pub fn gui(data: &mut Vec<Category>,
                     for download in category.downloads().iter() {
                         // NOTE: PLACEHOLDER PATHS
                         if let Err(error) = update_download(command_send_channel.clone(),
-                                                            download.to_owned(),
-                                                            category_dir.to_path_buf()) {
+                        download.to_owned(),
+                        category_dir.to_path_buf()) {
                             println!("{}", error);
                         }
                     }
@@ -162,8 +178,8 @@ pub fn gui(data: &mut Vec<Category>,
                 2 => {
                     let download = category.get_download_at_idx(indices[1] as usize);
                     if let Err(error) = update_download(command_send_channel.clone(),
-                                                        download.to_owned(),
-                                                        category_dir.to_path_buf()) {
+                    download.to_owned(),
+                    category_dir.to_path_buf()) {
                         println!("{}", error);
                     }
                     is_category = false;
@@ -179,7 +195,7 @@ pub fn gui(data: &mut Vec<Category>,
             if is_category {
                 if category_store.iter_has_child(&main_iter) {
                     let mut child_iter = category_store.iter_children(Some(&main_iter))
-                                                       .unwrap();
+                        .unwrap();
                     let max_child = category_store.iter_n_children(Some(&main_iter));
                     for _ in 0..max_child {
                         toggle_bool_iter(&child_iter, &category_store);
@@ -209,10 +225,10 @@ pub fn gui(data: &mut Vec<Category>,
         let command_send_channel = command_send_channel.clone();
         change_dir_button.connect_clicked(move |_| {
             let dialog = gtk::FileChooserDialog::new(Some("Change download directory"),
-                                                     Some(&window),
-                                                     gtk::FileChooserAction::SelectFolder);
+            Some(&window),
+            gtk::FileChooserAction::SelectFolder);
             dialog.add_buttons(&[("Select", gtk::ResponseType::Ok as i32),
-                                 ("Cancel", gtk::ResponseType::Cancel as i32)]);
+            ("Cancel", gtk::ResponseType::Cancel as i32)]);
 
             let default_dir = (*download_dir_ref.lock().unwrap()).to_owned();
             dialog.set_current_folder(default_dir.parent().unwrap());
@@ -222,16 +238,16 @@ pub fn gui(data: &mut Vec<Category>,
             dialog.destroy();
 
             if let Some(file_dir) = selection {
-        // check directory permissions
+                // check directory permissions
                 if let Ok(metadata) = fs::metadata(&file_dir) {
                     let permissions = metadata.permissions();
                     if !permissions.readonly() {
-        // Can write to the directory, change the directory to this one
+                        // Can write to the directory, change the directory to this one
                         let mut current_dir = download_dir_ref.lock().unwrap();
                         *current_dir = file_dir.clone();
                         command_send_channel.send(GuiCmdMsg::ChangeDir(file_dir)).expect("Failed to send message");
                     } else {
-        // Cannot write to the directory, tell the user.
+                        // Cannot write to the directory, tell the user.
                     }
                 }
             }
@@ -251,12 +267,12 @@ pub fn gui(data: &mut Vec<Category>,
                 let downloads = category.downloads();
                 for download in downloads {
                     if let Err(e) = command_send_channel.send(GuiCmdMsg::Add(download.id(),
-                                                               category_dir.clone())) {
+                    category_dir.clone())) {
                         panic!(e);
                     }
                 }
             }
-        // get_iter_first -> get_iter_next until returned false
+            // get_iter_first -> get_iter_next until returned false
             if let Some(first_iter) = category_store.get_iter_first() {
                 let mut iter = first_iter;
                 category_store.set_value(&iter, 1, &true.to_value());
@@ -280,7 +296,7 @@ pub fn gui(data: &mut Vec<Category>,
                     }
                 }
             }
-        // get_iter_first -> get_iter_next until returned false
+            // get_iter_first -> get_iter_next until returned false
             if let Some(first_iter) = category_store.get_iter_first() {
                 let mut iter = first_iter;
                 category_store.set_value(&iter, 1, &false.to_value());
@@ -324,8 +340,8 @@ pub fn gui(data: &mut Vec<Category>,
 
 fn toggle_bool_iter(iter: &gtk::TreeIter, category_store: &gtk::TreeStore) {
     let current_value = category_store.get_value(iter, 1)
-                                      .get::<bool>()
-                                      .expect("No Value");
+        .get::<bool>()
+        .expect("No Value");
     let new_value = (!current_value).to_value();
     category_store.set_value(iter, 1, &new_value);
 }
@@ -357,7 +373,7 @@ fn update_local() -> Continue {
                         &GuiChange::Remove(idx) => {
                             // remove index
                             let mut iter = download_store.iter_nth_child(None, idx as i32)
-                                                         .expect("no such iter");
+                                .expect("no such iter");
                             download_store.remove(&mut iter);
                             DOWNLOADS.lock().unwrap().remove(idx);
                         }
@@ -372,7 +388,7 @@ fn update_local() -> Continue {
                         }
                         &GuiChange::Set(idx, ref download) => {
                             let iter = download_store.iter_nth_child(None, idx as i32)
-                                                     .expect("no such iter");
+                                .expect("no such iter");
                             let values = download_to_values(&download).unwrap().1;
                             download_store.set_download(&iter, values);
                         }
@@ -410,20 +426,20 @@ pub fn update_gui() {
 fn update_download(sender: Sender<GuiCmdMsg>,
                    download: Download,
                    out_path: PathBuf)
-                   -> Result<(), SendError<GuiCmdMsg>> {
-    let id = download.id();
-    for dl in DOWNLOADS.lock().unwrap().iter() {
-        if dl.id() == id {
-            if dl.enabled() {
-                return sender.send(GuiCmdMsg::Remove(id));
-            } else {
-                return sender.send(GuiCmdMsg::Add(id, out_path));
+    -> Result<(), SendError<GuiCmdMsg>> {
+        let id = download.id();
+        for dl in DOWNLOADS.lock().unwrap().iter() {
+            if dl.id() == id {
+                if dl.enabled() {
+                    return sender.send(GuiCmdMsg::Remove(id));
+                } else {
+                    return sender.send(GuiCmdMsg::Add(id, out_path));
+                }
             }
         }
+        // not found in current list
+        return sender.send(GuiCmdMsg::Add(id, out_path));
     }
-    // not found in current list
-    return sender.send(GuiCmdMsg::Add(id, out_path));
-}
 
 trait AddCategories {
     fn add_category(&self, category: &Category);

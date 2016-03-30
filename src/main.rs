@@ -29,6 +29,7 @@ mod cellrenderers;
 mod theme;
 mod constants;
 mod fsthread;
+mod button;
 
 use commhandler::*;
 use parse::*;
