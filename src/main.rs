@@ -30,6 +30,7 @@ mod theme;
 mod constants;
 mod fsthread;
 mod button;
+mod menu;
 
 use commhandler::*;
 use parse::*;
