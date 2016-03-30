@@ -91,7 +91,8 @@ pub fn gui(data: &mut Vec<Category>,
                 let time = ebutton.get_time();
                 if let Some((Some(path), Some(col), _, _)) = treeview.get_path_at_pos(x as i32, y as i32) {
                     treeview.grab_focus();
-                    treeview.set_cursor(path, Some(col), false);
+                    treeview.set_cursor(&path, Some(&col), false);
+                    println!("right clicked");
                 }
             }
             Inhibit(false)
