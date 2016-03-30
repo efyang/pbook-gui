@@ -376,6 +376,7 @@ fn update_local() -> Continue {
                 // go through change list and update accordingly
                 // command, optional id, optional index, optional new value
                 // [string, u64, usize, Download]
+                print!("\rchanges: {}", changes.len());
                 for change in changes.iter() {
                     match change {
                         &GuiChange::Remove(idx) => {

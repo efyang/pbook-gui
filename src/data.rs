@@ -215,6 +215,14 @@ impl Download {
             download_info.set_finished();
         }    
     }
+
+    pub fn progress(&self) -> Option<usize> {
+        if let Some(ref download_info) = self.download_info {
+            Some(download_info.progress())
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -246,6 +254,10 @@ impl DownloadInfo {
     }
 
     // Getters
+    
+    pub fn progress(&self) -> usize {
+        self.progress
+    }
 
     pub fn total(&self) -> usize {
         self.total

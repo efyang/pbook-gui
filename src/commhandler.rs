@@ -96,7 +96,6 @@ impl CommHandler {
                 }
             }
         }
-        print!("\r{:?}", *self.current_threads.lock().unwrap());
 
         // start execution of any jobs that exist
         let max_threads = self.max_threads.lock().unwrap().clone();
@@ -153,10 +152,13 @@ impl CommHandler {
                 let id = self.current_ids[idx];
                 let mut download = self.data.get_mut(&id).unwrap();
                 if download.downloading() {
+                    // do not add a change if it is not actually downloading - unnecessary update
                     download.increment_progress(*self.datacache.get(&id).unwrap_or(&0))
                         .unwrap();
-                    // add to pending changes
-                    self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
+                    if download.progress().unwrap_or(0) > 0 && !download.finished() {
+                        // add to pending changes
+                        self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
+                    }
                 }
             }
             // clear datacache
