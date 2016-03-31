@@ -11,6 +11,7 @@ use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
 use helper::{name_to_fname, name_to_dname, Ignore};
 use std::fs::metadata;
+use std::thread::sleep;
 
 pub struct Downloader {
     url: String,
@@ -23,7 +24,7 @@ pub struct Downloader {
     client: Client,
     stream: Option<Response>,
     outfile: Option<BufWriter<File>>,
-    buffer: [u8; 16],
+    buffer: [u8; 128],
 }
 
 impl Downloader {
@@ -54,7 +55,7 @@ impl Downloader {
                           },
                           stream: None,
                           outfile: None,
-                          buffer: [0; 16],
+                          buffer: [0; 128],
             }
         }
 
@@ -201,7 +202,10 @@ impl Downloader {
                         }
                     }
                 }
-            }
+            } 
+            sleep(Duration::new(0, 100));
+        } else {
+            sleep(Duration::new(0, 100000));
         }
 
         Ok(())

@@ -95,7 +95,7 @@ pub fn gui(data: &mut Vec<Category>,
                     treeview.set_cursor(&path, Some(&col), false);
                     
                     let right_click_menu = gtk::Menu::new();
-                    let menu_buttons = ["Pause", "Restart", "Open", "Stop"];
+                    let menu_buttons = ["Pause", "Resume", "Restart", "Open", "Cancel"];
                     for name in menu_buttons.iter() {
                         let item = gtk::MenuItem::new_with_label(name);
                         item.set_name(name);
@@ -115,6 +115,9 @@ pub fn gui(data: &mut Vec<Category>,
                                 "Pause" => {
                                     println!("pause");
                                 }
+                                "Resume" => {
+                                    println!("resume");
+                                }
                                 "Restart" => {
                                     println!("restart");
                                 }
@@ -122,7 +125,7 @@ pub fn gui(data: &mut Vec<Category>,
                                     println!("open");
                                 }
                                 "Stop" => {
-                                    println!("stop");
+                                    println!("cancel");
                                 }
                                 _ => {}
                             }

@@ -3,6 +3,7 @@ use std::fs;
 use std::thread;
 use std::sync::mpsc::{channel, Sender, Receiver};
 use helper::Ignore;
+use std::time::Duration;
 
 pub enum FsCommand {
     Copy(PathBuf, PathBuf), // source, dest
@@ -74,6 +75,8 @@ impl FsThread {
                             run = false;
                         }
                     }
+                } else {
+                    thread::sleep(Duration::new(0, 5000));
                 }
             }
         }).expect("Failed to spawn FsThread");
