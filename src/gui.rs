@@ -86,12 +86,6 @@ pub fn gui(data: &mut Vec<Category>,
 
     // add right click context menu for downloads
     {
-        let right_click_menu = gtk::Menu::new();
-        let test_item = gtk::MenuItem::new_with_label("Test item");
-        let test_item2 = gtk::MenuItem::new_with_label("Test item2");
-        right_click_menu.append(&test_item);
-        right_click_menu.append(&test_item2);
-        right_click_menu.show_all();
         downloadview.connect_button_release_event(move |ref treeview, ref ebutton| {
             if is_right_click(*ebutton) {
                 let (x, y) = ebutton.get_position();
@@ -99,7 +93,42 @@ pub fn gui(data: &mut Vec<Category>,
                 if let Some((Some(path), Some(col), _, _)) = treeview.get_path_at_pos(x as i32, y as i32) {
                     treeview.grab_focus();
                     treeview.set_cursor(&path, Some(&col), false);
+                    
+                    let right_click_menu = gtk::Menu::new();
+                    let menu_buttons = ["Pause", "Restart", "Open", "Stop"];
+                    for name in menu_buttons.iter() {
+                        let item = gtk::MenuItem::new_with_label(name);
+                        item.set_name(name);
+                        right_click_menu.append(&item);
+                    }
+                    // null item workaround
+                    let null_item = gtk::MenuItem::new_with_label("");
+                    null_item.set_name("None");
+                    right_click_menu.add(&null_item);
+                    right_click_menu.set_active(menu_buttons.len() as u32);
+                    right_click_menu.show_all();
+                    null_item.hide();
                     right_click_menu.popup(3, time);
+                    right_click_menu.connect_hide(|this| {
+                        if let Some(selection) = this.get_active() {
+                            match &selection.get_name().unwrap() as &str {
+                                "Pause" => {
+                                    println!("pause");
+                                }
+                                "Restart" => {
+                                    println!("restart");
+                                }
+                                "Open" => {
+                                    println!("open");
+                                }
+                                "Stop" => {
+                                    println!("stop");
+                                }
+                                _ => {}
+                            }
+                        }
+                        this.destroy();
+                    });
                 }
             }
             Inhibit(false)
