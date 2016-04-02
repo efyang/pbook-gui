@@ -49,8 +49,8 @@ pub fn gui(data: &mut Vec<Category>,
     window.set_default_size(1000, 500);
     let pixbuf_loader = PixbufLoader::new_with_type("ico").unwrap();
     pixbuf_loader.loader_write(RAW_ICON).unwrap();
-    let window_icon = pixbuf_loader.get_pixbuf().unwrap();
     pixbuf_loader.close().unwrap();
+    let window_icon = pixbuf_loader.get_pixbuf().unwrap();
     window.set_icon(Some(&window_icon));
 
     *DOWNLOADS.lock().unwrap() = Vec::new();
