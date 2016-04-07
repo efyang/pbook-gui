@@ -124,7 +124,7 @@ pub fn gui(data: &mut Vec<Category>,
                                 "Open" => {
                                     println!("open");
                                 }
-                                "Stop" => {
+                                "Cancel" => {
                                     println!("cancel");
                                 }
                                 _ => {}
