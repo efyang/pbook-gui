@@ -5,7 +5,7 @@ use time::precise_time_s;
 use time;
 use helper::{minimum, maximum, make_string_if_nonzero};
 use constants::DOWNLOAD_SPEED_UPDATE_TIME;
-use std::{i32, i64};
+use std::i64;
 // refactor TpoolProgressMsg to just be a DownloadUpdate
 pub enum DownloadUpdate {
     Message(String),
@@ -17,6 +17,7 @@ pub enum DownloadUpdate {
 
 pub enum GuiCmdMsg {
     Add(u64, PathBuf),
+    Restart(u64, PathBuf),
     Remove(u64),
     ChangeDir(PathBuf),
     Stop,
@@ -295,7 +296,7 @@ impl DownloadInfo {
             streta = "N/A".to_owned();
         } else if self.progress >= self.total {
             streta = "Done.".to_owned();
-        } else if maximum(eta, i32::MAX as f32) == eta || speed == 0.0 {
+        } else if maximum(eta, 1000000.0) == eta || speed == 0.0 {
             streta = "∞".to_owned();
         } else {
             let dur = time::Duration::seconds(maximum(minimum(eta as i64, i64::MAX), 0));

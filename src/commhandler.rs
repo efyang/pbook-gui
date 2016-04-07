@@ -195,6 +195,15 @@ impl CommHandler {
                 // add to pending changes
                 self.pending_changes.push(GuiChange::Add(download.to_owned()));
             }
+            GuiCmdMsg::Restart(id, path) => {
+                let mut download = self.data.get_mut(&id).unwrap();
+                download.start_download();
+                download.set_enable_state(true);
+                download.set_path(path);
+                self.jobs.push_front(download.clone());
+                let idx = self.current_ids.iter().position(|&x| x == id).unwrap();
+                self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
+            }
             GuiCmdMsg::Remove(id) => {
                 let mut in_jobs = false;
                 // remove from jobs if existing
