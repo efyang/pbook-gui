@@ -17,7 +17,7 @@ pub enum DownloadUpdate {
 
 pub enum GuiCmdMsg {
     Add(u64, PathBuf),
-    Restart(u64, PathBuf),
+    Restart(usize), // usize = index
     Remove(u64),
     ChangeDir(PathBuf),
     Stop,

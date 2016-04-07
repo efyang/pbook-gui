@@ -195,13 +195,12 @@ impl CommHandler {
                 // add to pending changes
                 self.pending_changes.push(GuiChange::Add(download.to_owned()));
             }
-            GuiCmdMsg::Restart(id, path) => {
+            GuiCmdMsg::Restart(idx) => {
+                let id = self.current_ids[idx];
                 let mut download = self.data.get_mut(&id).unwrap();
                 download.start_download();
                 download.set_enable_state(true);
-                download.set_path(path);
                 self.jobs.push_front(download.clone());
-                let idx = self.current_ids.iter().position(|&x| x == id).unwrap();
                 self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
             }
             GuiCmdMsg::Remove(id) => {
