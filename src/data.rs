@@ -1,10 +1,9 @@
-use std::time::Duration;
 use std::hash::{Hash, Hasher, SipHasher};
 pub use std::path::{Path, PathBuf};
 use time::precise_time_s;
 use time;
 use helper::{minimum, maximum, make_string_if_nonzero};
-use constants::DOWNLOAD_SPEED_UPDATE_TIME;
+use constants::{DOWNLOAD_SPEED_UPDATE_TIME, DOWNLOAD_SPEED_SMOOTH_FACTOR};
 use std::i64;
 // refactor TpoolProgressMsg to just be a DownloadUpdate
 pub enum DownloadUpdate {
@@ -230,11 +229,11 @@ pub struct DownloadInfo {
     failed: bool,
     progress: usize,
     total: usize,
-    previous_progress: usize,
+    prev_progress: usize,
     recent_progress: usize,
     recent_progress_clear_time: f64,
     finished: bool,
-    elapsed: Duration,
+    start_time: f64, 
     path: PathBuf,
 }
 
@@ -244,11 +243,11 @@ impl DownloadInfo {
             failed: false,
             progress: 0,
             total: 0,
-            previous_progress: 0,
+            prev_progress: 0,
             recent_progress: 0,
             recent_progress_clear_time: precise_time_s() + DOWNLOAD_SPEED_UPDATE_TIME,
             finished: false,
-            elapsed: Duration::new(0, 0),
+            start_time: precise_time_s(),
             path: PathBuf::new(),
         }
     }
@@ -276,8 +275,17 @@ impl DownloadInfo {
     }
 
     // to bytes per second
+    // http://stackoverflow.com/questions/2779600/how-to-estimate-download-time-remaining-accurately
     pub fn speed(&self) -> f32 {
-        self.recent_progress as f32 / DOWNLOAD_SPEED_UPDATE_TIME as f32
+        if self.progress >= self.total {
+            0.0
+        } else {
+            let now = precise_time_s();
+            let speed_avg = self.progress as f64 / (now - self.start_time);
+            let speed_recent  = self.prev_progress as f64 / DOWNLOAD_SPEED_UPDATE_TIME;
+            let float_speed = DOWNLOAD_SPEED_SMOOTH_FACTOR * speed_recent + (1.0 - DOWNLOAD_SPEED_SMOOTH_FACTOR) * speed_avg;
+            float_speed as f32
+        }
     }
 
     // to seconds
@@ -331,11 +339,11 @@ impl DownloadInfo {
         self.progress += increment;
         let timenow = precise_time_s();
         if timenow >= self.recent_progress_clear_time {
-            self.previous_progress = self.recent_progress;
-            if self.progress == self.total || increment == 0 {
-                self.recent_progress /= 2;
-            } else {
-                self.recent_progress = (self.recent_progress + self.previous_progress) / 2;
+            self.recent_progress += increment;
+            self.prev_progress = self.recent_progress;
+            self.recent_progress = 0;
+            if self.progress >= self.total {
+                self.prev_progress = 0;
             }
             self.recent_progress_clear_time = timenow + DOWNLOAD_SPEED_UPDATE_TIME;
         } else {
