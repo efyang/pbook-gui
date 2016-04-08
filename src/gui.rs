@@ -24,7 +24,8 @@ use menu::*;
 
 pub fn gui(data: &mut Vec<Category>,
            update_recv_channel: Receiver<GuiUpdateMsg>,
-           command_send_channel: Sender<GuiCmdMsg>) {
+           command_send_channel: Sender<GuiCmdMsg>,
+           threads: usize) {
     if gtk::init().is_err() {
         panic!("Failed to initialize GTK.");
     }
@@ -245,6 +246,28 @@ pub fn gui(data: &mut Vec<Category>,
         });
     }
 
+    let float_threads = threads as f64;
+    let thread_box_frame = gtk::Frame::new(None);
+    let thread_box = gtk::Box::new(Orientation::Vertical, 0);
+    let thread_label = gtk::Label::new(Some("Max threads to use"));
+    let thread_set_scale = gtk::Scale::new_with_range(Orientation::Horizontal, 1.0, float_threads * 4.0, 1.0);
+    thread_set_scale.get_adjustment().set_value(float_threads);
+    thread_set_scale.add_mark(float_threads, gtk::PositionType::Bottom, Some("Default"));
+    thread_set_scale.add_mark(float_threads, gtk::PositionType::Top, Some(&threads.to_string()));
+    thread_set_scale.add_mark(1.0, gtk::PositionType::Top, Some("1"));
+    thread_set_scale.add_mark(float_threads * 4.0, gtk::PositionType::Top, Some(&format!("{}", threads * 4)));
+
+    thread_box.add(&thread_label);
+    thread_box.add(&thread_set_scale);
+    thread_box_frame.add(&thread_box);
+
+    {
+        let command_send_channel = command_send_channel.clone();
+        thread_set_scale.get_adjustment().connect_value_changed(move |adj| {
+            command_send_channel.send(GuiCmdMsg::SetThreads(adj.get_value() as usize)).ignore();
+        });
+    }
+
     let button_state_box = gtk::ButtonBox::new(Orientation::Horizontal);
     button_state_box.set_layout(ButtonBoxStyle::Center);
     let enable_all_button = gtk::Button::new_with_label("Enable All");
@@ -253,9 +276,10 @@ pub fn gui(data: &mut Vec<Category>,
     button_state_box.add(&disable_all_button);
 
     let change_dir_button = gtk::Button::new_with_label("Change Directory");
-    let button_holder_box = gtk::Box::new(Orientation::Vertical, 10);
-    button_holder_box.pack_start(&change_dir_button, true, true, 0);
-    button_holder_box.pack_end(&button_state_box, true, true, 0);
+    let button_holder_box = gtk::Box::new(Orientation::Vertical, 0);
+    button_holder_box.add(&change_dir_button);
+    button_holder_box.add(&button_state_box);
+    button_holder_box.add(&thread_box_frame);
 
     // change download directory
     {

@@ -180,10 +180,10 @@ impl Downloader {
                         // Finished downloading
                         outfile.flush().expect("Failed to flush to outfile");
                         drop(outfile);
-                        rename(&self.filepath, &self.actualpath)
-                            .expect(&format!("Failed to rename tmp file: {:?} to {:?}",
-                                             self.filepath,
-                                             self.actualpath));
+                        rename(&self.filepath, &self.actualpath).ignore();
+                            //.expect(&format!("Failed to rename tmp file: {:?} to {:?}",
+                                             //self.filepath,
+                                             //self.actualpath));
                         self.progress_send
                             .send((self.id, DownloadUpdate::Finished))
                             //.expect("Failed to send message");

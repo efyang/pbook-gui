@@ -100,7 +100,7 @@ impl CommHandler {
         // start execution of any jobs that exist
         let max_threads = self.max_threads.lock().unwrap().clone();
         let current_threads = self.current_threads.lock().unwrap().clone();
-        if !self.jobs.is_empty() && (max_threads - current_threads) > 0 {
+        if !self.jobs.is_empty() && (max_threads > current_threads) {
             let job = self.jobs.pop_front().unwrap();
             let progress_sender = self.threadpool_progress_send.clone();
             let (tchan_cmd_s, tchan_cmd_r) = channel();
@@ -268,6 +268,10 @@ impl CommHandler {
                     self.broadcast(TpoolCmdMsg::Remove(id)).ignore();
                 }
 
+            }
+            GuiCmdMsg::SetThreads(threads) => {
+                *self.max_threads.lock().unwrap() = threads;
+                self.threadpool.set_threads(threads);
             }
             GuiCmdMsg::ChangeDir(newdir) => {
                 // Copy over all of the finished downloads

@@ -60,5 +60,5 @@ fn main() {
     });
 
     // start gtk gui
-    gui::gui(&mut parsed_data, gui_update_recv, gui_cmd_send);
+    gui::gui(&mut parsed_data, gui_update_recv, gui_cmd_send, threads);
 }

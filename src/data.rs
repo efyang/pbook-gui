@@ -21,6 +21,7 @@ pub enum GuiCmdMsg {
     Open(usize),
     Remove(u64),
     ChangeDir(PathBuf),
+    SetThreads(usize),
     Stop,
 }
 
