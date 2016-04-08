@@ -41,7 +41,7 @@ impl FsThread {
                 if let Ok(command) = fsthread.command_recv.try_recv() {
                     match command {
                         FsCommand::Copy(source, dest) => {
-                            if let Err(e) = fs::copy(source, dest) {
+                            if let Err(e) = fs::copy(&source, &dest) {
                                 fsthread.update_send.send(FsUpdate::Error(e.to_string())).ignore();
                             }
                         }
@@ -64,7 +64,7 @@ impl FsThread {
                                 }
                             } else {
                                 // remove file
-                                if let Err(e) = fs::remove_file(path) {
+                                if let Err(e) = fs::remove_file(&path) {
                                     fsthread.update_send
                                             .send(FsUpdate::Error(e.to_string()))
                                             .ignore();
@@ -76,7 +76,7 @@ impl FsThread {
                         }
                     }
                 } else {
-                    thread::sleep(Duration::new(0, 5000));
+                    thread::sleep(Duration::new(0, 500));
                 }
             }
         }).expect("Failed to spawn FsThread");

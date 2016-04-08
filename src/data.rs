@@ -18,6 +18,8 @@ pub enum DownloadUpdate {
 pub enum GuiCmdMsg {
     Add(u64, PathBuf),
     Restart(usize), // usize = index
+    Cancel(usize),
+    Open(usize),
     Remove(u64),
     ChangeDir(PathBuf),
     Stop,
@@ -39,6 +41,7 @@ pub enum GuiChange {
     Remove(usize), // idx
     Add(Download), // download
     Set(usize, Download), // idx, download
+    Open(String),
     Panicked(bool, String), // id -- work on this
 }
 
@@ -82,10 +85,6 @@ impl Category {
     pub fn downloads(&self) -> &[Download] {
         &self.downloads
     }
-
-    // pub fn ids(&self) -> Vec<u64> {
-    // self.downloads.iter().map(|dl| dl.id()).collect::<Vec<u64>>()
-    // }
 
     pub fn get_download_at_idx(&self, idx: usize) -> &Download {
         &self.downloads[idx]

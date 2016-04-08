@@ -2,12 +2,16 @@ use data::*;
 use gtk;
 use gtk::prelude::*;
 use gtk::{Orientation, ButtonBoxStyle};
+//use gtk_sys::{gtk_show_uri, gtk_get_current_event_time};
+use gio_sys::g_app_info_launch_default_for_uri;
 use std::env;
 use std::sync::mpsc::{Sender, Receiver, SendError};
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use std::cell::RefCell;
 use std::fs;
+use std::ptr::null_mut;
+use std::ffi::CString;
 use glib;
 use glib::types::Type;
 use helper::*;
@@ -65,8 +69,6 @@ pub fn gui(data: &mut Vec<Category>,
         id_download_hm
     };
     // main rendering
-    let button = gtk::Button::new_with_label("Click me!");
-
     let downloadview = gtk::TreeView::new();
     // name, size, progress, speed, eta
     let download_column_types = [Type::String, Type::String, Type::F32, Type::String, Type::String];
@@ -75,7 +77,7 @@ pub fn gui(data: &mut Vec<Category>,
     downloadview.add_text_renderer_column("Size", true, true, false, AddMode::PackStart, false, 1);
     downloadview.add_progress_renderer_column("Progress", true, true, true, AddMode::PackStart, 2);
     downloadview.add_text_renderer_column("Speed", true, true, false, AddMode::PackStart, false, 3);
-    downloadview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, false, 4);
+    downloadview.add_text_renderer_column("ETA", true, true, false, AddMode::PackStart, true, 4);
 
     for item in initial_model {
         download_store.add_download(item.1);
@@ -97,7 +99,7 @@ pub fn gui(data: &mut Vec<Category>,
                     treeview.set_cursor(&path, Some(&col), false);
 
                     let right_click_menu = gtk::Menu::new();
-                    let menu_buttons = ["Pause", "Resume", "Restart", "Open", "Cancel"];
+                    let menu_buttons = ["Restart", "Open Directory", "Cancel"];
                     for name in menu_buttons.iter() {
                         let item = gtk::MenuItem::new_with_label(name);
                         item.set_name(name);
@@ -111,27 +113,20 @@ pub fn gui(data: &mut Vec<Category>,
                     right_click_menu.show_all();
                     null_item.hide();
                     right_click_menu.popup(3, time);
-
+                    let command_send_channel = command_send_channel.clone();
                     right_click_menu.connect_hide(move |this| {
                         if let Some(selection) = this.get_active() {
                             //get the index of the item
                             let idx = path.get_indices()[0] as usize;
                             match &selection.get_name().unwrap() as &str {
-                                "Pause" => {
-                                    println!("pause");
-                                }
-                                "Resume" => {
-                                    println!("resume");
-                                }
                                 "Restart" => {
-                                    command_send_channel.send(GuiCmdMsg::Restart(idx));
-                                    println!("restart");
+                                    command_send_channel.send(GuiCmdMsg::Restart(idx)).ignore();
                                 }
-                                "Open" => {
-                                    println!("open");
+                                "Open Directory" => {
+                                    command_send_channel.send(GuiCmdMsg::Open(idx)).ignore();
                                 }
                                 "Cancel" => {
-                                    println!("cancel");
+                                    command_send_channel.send(GuiCmdMsg::Cancel(idx)).ignore();
                                 }
                                 _ => {}
                             }
@@ -157,7 +152,6 @@ pub fn gui(data: &mut Vec<Category>,
     // put the scroll and downloads together
     let download_box = gtk::Box::new(gtk::Orientation::Vertical, 10);
     download_box.pack_start(&download_scroll, true, true, 0);
-    download_box.pack_end(&button, false, true, 0);
 
     let categoryview = gtk::TreeView::new();
     let category_column_types = [Type::String, Type::Bool];
@@ -414,7 +408,6 @@ fn update_local() -> Continue {
                 // go through change list and update accordingly
                 // command, optional id, optional index, optional new value
                 // [string, u64, usize, Download]
-                print!("\rchanges: {}", changes.len());
                 for change in changes.iter() {
                     match change {
                         &GuiChange::Remove(idx) => {
@@ -438,6 +431,20 @@ fn update_local() -> Continue {
                                 .expect("no such iter");
                             let values = download_to_values(&download).unwrap().1;
                             download_store.set_download(&iter, values);
+                        }
+                        &GuiChange::Open(ref file_url) => {
+                            let basepath = Path::new(file_url);
+                            let parent = basepath.parent().unwrap();
+                            let fileprefix;
+                            if cfg!(target_os = "windows") {
+                                fileprefix = "file:\\\\";
+                            } else {
+                                fileprefix = "file://";
+                            }
+                            let urlstr = CString::new(format!("{}{}", fileprefix, parent.to_str().unwrap())).unwrap();
+                            unsafe {
+                                g_app_info_launch_default_for_uri(urlstr.as_ptr(), null_mut(), null_mut());
+                            }
                         }
                         &GuiChange::Panicked(is_downloader, ref error) => {
                             if is_downloader {

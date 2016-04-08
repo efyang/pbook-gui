@@ -45,32 +45,32 @@ impl CommHandler {
     pub fn new(basethreads: usize,
                start_data: Vec<Download>,
                guichannels: (Sender<GuiUpdateMsg>, Receiver<GuiCmdMsg>))
-        -> CommHandler {
-            let (progress_s, progress_r) = channel();
-            let mut id_data_hm = HashMap::new();
-            for download in start_data.iter() {
-                id_data_hm.insert(download.id(), download.clone());
-            }
-            let (fsthread_send, fsthread_recv) = FsThread::spawn();
-            CommHandler {
-                threadpool: ThreadPool::new(basethreads),
-                max_threads: Arc::new(Mutex::new(basethreads)),
-                current_threads: Arc::new(Mutex::new(0)),
-                data: id_data_hm,
-                current_ids: Vec::new(),
-                jobs: VecDeque::new(), // FIFO queue
-                datacache: HashMap::new(),
-                pending_changes: Vec::new(),
-                gui_update_send: guichannels.0,
-                gui_cmd_recv: guichannels.1,
-                threadpool_progress_recv: progress_r,
-                threadpool_progress_send: progress_s,
-                fsthread_send: fsthread_send,
-                fsthread_recv: fsthread_recv,
-                threadpool_cmd_send: Vec::new(),
-                next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
-            }
+               -> CommHandler {
+        let (progress_s, progress_r) = channel();
+        let mut id_data_hm = HashMap::new();
+        for download in start_data.iter() {
+            id_data_hm.insert(download.id(), download.clone());
         }
+        let (fsthread_send, fsthread_recv) = FsThread::spawn();
+        CommHandler {
+            threadpool: ThreadPool::new(basethreads),
+            max_threads: Arc::new(Mutex::new(basethreads)),
+            current_threads: Arc::new(Mutex::new(0)),
+            data: id_data_hm,
+            current_ids: Vec::new(),
+            jobs: VecDeque::new(), // FIFO queue
+            datacache: HashMap::new(),
+            pending_changes: Vec::new(),
+            gui_update_send: guichannels.0,
+            gui_cmd_recv: guichannels.1,
+            threadpool_progress_recv: progress_r,
+            threadpool_progress_send: progress_s,
+            fsthread_send: fsthread_send,
+            fsthread_recv: fsthread_recv,
+            threadpool_cmd_send: Vec::new(),
+            next_gui_update_t: precise_time_ns() + GUI_UPDATE_TIME,
+        }
+    }
 
     pub fn update(&mut self) {
         // handle gui cmd
@@ -154,7 +154,7 @@ impl CommHandler {
                 if download.downloading() {
                     // do not add a change if it is not actually downloading - unnecessary update
                     download.increment_progress(*self.datacache.get(&id).unwrap_or(&0))
-                        .unwrap();
+                            .unwrap();
                     if download.progress().unwrap_or(0) > 0 && !download.finished() {
                         // add to pending changes
                         self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
@@ -203,6 +203,16 @@ impl CommHandler {
                 self.jobs.push_front(download.clone());
                 self.pending_changes.push(GuiChange::Set(idx, download.to_owned()));
             }
+            GuiCmdMsg::Open(idx) => {
+                let id = self.current_ids[idx];
+                let download = self.data.get(&id).unwrap();
+                self.pending_changes
+                    .push(GuiChange::Open(download.path()
+                                                  .join(name_to_fname(download.name()))
+                                                  .to_str()
+                                                  .unwrap()
+                                                  .to_owned()));
+            }
             GuiCmdMsg::Remove(id) => {
                 let mut in_jobs = false;
                 // remove from jobs if existing
@@ -233,6 +243,32 @@ impl CommHandler {
                     self.broadcast(TpoolCmdMsg::Remove(id)).ignore();
                 }
             }
+            GuiCmdMsg::Cancel(idx) => {
+                let id = self.current_ids[idx];
+                let mut in_jobs = false;
+                for i in 0..self.jobs.len() {
+                    if self.jobs[i].id() == id {
+                        self.jobs.remove(idx);
+                        in_jobs = true;
+                        break;
+                    }
+                }
+
+                self.current_ids.remove(idx);
+                self.pending_changes.push(GuiChange::Remove(idx));
+
+                {
+                    let mut dl = self.data.get_mut(&id).unwrap();
+                    dl.set_enable_state(false);
+                    dl.stop_download();
+                }
+
+                // broadcast to all threads
+                if !in_jobs {
+                    self.broadcast(TpoolCmdMsg::Remove(id)).ignore();
+                }
+
+            }
             GuiCmdMsg::ChangeDir(newdir) => {
                 // Copy over all of the finished downloads
                 for id in self.current_ids.iter() {
@@ -243,27 +279,19 @@ impl CommHandler {
                         let newpath;
                         if let Some(ref category_name) = dl.category_name() {
                             let category_dir = newdir.to_owned()
-                                .join(name_to_dname(category_name));
+                                                     .join(name_to_dname(category_name));
                             create_dir_all(&category_dir).expect("Failed to create dir");
                             newpath = category_dir.join(fname);
                         } else {
                             newpath = newdir.to_owned()
-                                .join(fname);
+                                            .join(fname);
                         }
-                        // if the copy is failed then it has already been renamed; ignore this
-                        // TODO: make this use coroutines/threads to minimize update lag
                         self.fsthread_send
                             .send(FsCommand::Copy(oldpath.clone(), newpath.clone()))
                             .expect("FsThread send fail");
-                        // copy(oldpath.clone(), newpath.clone())
-                        // .expect(&format!("Copy fail {:?} -> {:?} Download: {:#?}",
-                        // oldpath.clone(),
-                        // newpath.clone(),
-                        // dl));
                         self.fsthread_send
                             .send(FsCommand::Remove(oldpath))
                             .expect("FsThread send fail");
-                        // remove_file(oldpath).expect("Remove fail");
                     }
                     dl.set_path(newdir.to_owned());
                 }
@@ -273,12 +301,12 @@ impl CommHandler {
                     let category_name = job.category_name();
                     let backup_fname = name_to_fname(job.name());
                     let current_fname = current_path.file_name()
-                        .unwrap_or(OsStr::new(&backup_fname));
+                                                    .unwrap_or(OsStr::new(&backup_fname));
                     let newpath;
                     if let Some(category) = category_name {
                         newpath = newdir.to_owned()
-                            .join(name_to_dname(&category))
-                            .join(current_fname);
+                                        .join(name_to_dname(&category))
+                                        .join(current_fname);
                     } else {
                         newpath = newdir.to_owned().join(current_fname);
                     }
@@ -355,8 +383,9 @@ impl CommHandler {
     fn handle_fsthread_update(&mut self, update: FsUpdate) {
         match update {
             FsUpdate::Error(msg) => {
-                self.pending_changes.push(GuiChange::Panicked(true, format!("FsThread error: {}", msg)));
-            },
+                self.pending_changes
+                    .push(GuiChange::Panicked(true, format!("FsThread error: {}", msg)));
+            }
         }
     }
 }

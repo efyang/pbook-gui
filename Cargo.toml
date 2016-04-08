@@ -17,6 +17,7 @@ gdk = {git = "https://github.com/gtk-rs/gdk"}
 gdk-pixbuf = {git = "https://github.com/gtk-rs/gdk-pixbuf"}
 gobject-sys = {git = "https://github.com/gtk-rs/sys"}
 pango-sys = {git = "https://github.com/gtk-rs/sys"}
+gio-sys = {git = "https://github.com/gtk-rs/sys"}
 
 num_cpus = "0.2"
 time = "0.1"

@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Sender, Receiver};
 use std::io::prelude::*;
 use std::io::{Error, BufWriter, ErrorKind};
-use std::fs::{File, copy, create_dir_all, rename};
+use std::fs::{File, copy, create_dir_all, rename, metadata, remove_file};
 use std::time::Duration;
 use hyper;
 use hyper::client::Client;
@@ -10,7 +10,6 @@ use hyper::header::ContentLength;
 use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
 use helper::{name_to_fname, name_to_dname, Ignore};
-use std::fs::metadata;
 use std::thread::sleep;
 
 pub struct Downloader {
@@ -60,7 +59,13 @@ impl Downloader {
         }
 
     pub fn begin(&mut self) -> Result<(), String> {
-        if self.actualpath.exists() {
+        let actual_exists;
+        let filepath_exists;
+        {
+            actual_exists = File::open(&self.actualpath).is_ok();
+            filepath_exists = File::open(&self.actualpath).is_ok();
+        }
+        if actual_exists {
             // get file metadata (size)
             let filelength;
             if let Ok(metadata) = metadata(self.actualpath.clone()) {
@@ -78,6 +83,10 @@ impl Downloader {
                 .expect("Failed to send finished");
             return Err("finished".to_owned());
         } else {
+            if filepath_exists {
+                // remove the preexisting tmp file
+                remove_file(self.filepath.as_path()).expect(&format!("Failed to remove pre-existing .tmp file: {:?}", self.filepath));
+            }
             if let Err(e) = self.get_url(0, 5) {
                 return Err(e);
             }
@@ -202,7 +211,7 @@ impl Downloader {
                         }
                     }
                 }
-            } 
+            }
             sleep(Duration::new(0, 100));
         } else {
             sleep(Duration::new(0, 100000));
@@ -227,7 +236,6 @@ impl Downloader {
         } else {
             newpath = newdir.join(current_filename);
         }
-        println!("newpath: {:?}", newpath);
         self.change_path(&newpath);
     }
 
