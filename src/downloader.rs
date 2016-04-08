@@ -1,7 +1,7 @@
 use std::sync::mpsc::{Sender, Receiver};
 use std::io::prelude::*;
 use std::io::{Error, BufWriter, ErrorKind};
-use std::fs::{File, copy, create_dir_all, rename};
+use std::fs::{File, copy, create_dir_all, rename, metadata, remove_file};
 use std::time::Duration;
 use hyper;
 use hyper::client::Client;
@@ -10,7 +10,7 @@ use hyper::header::ContentLength;
 use data::*;
 use constants::CONNECT_MILLI_TIMEMOUT;
 use helper::{name_to_fname, name_to_dname, Ignore};
-use std::fs::metadata;
+use std::thread::sleep;
 
 pub struct Downloader {
     url: String,
@@ -23,7 +23,7 @@ pub struct Downloader {
     client: Client,
     stream: Option<Response>,
     outfile: Option<BufWriter<File>>,
-    buffer: [u8; 16],
+    buffer: [u8; 128],
 }
 
 impl Downloader {
@@ -54,12 +54,18 @@ impl Downloader {
                           },
                           stream: None,
                           outfile: None,
-                          buffer: [0; 16],
+                          buffer: [0; 128],
             }
         }
 
     pub fn begin(&mut self) -> Result<(), String> {
-        if self.actualpath.exists() {
+        let actual_exists;
+        let filepath_exists;
+        {
+            actual_exists = File::open(&self.actualpath).is_ok();
+            filepath_exists = File::open(&self.actualpath).is_ok();
+        }
+        if actual_exists {
             // get file metadata (size)
             let filelength;
             if let Ok(metadata) = metadata(self.actualpath.clone()) {
@@ -77,6 +83,10 @@ impl Downloader {
                 .expect("Failed to send finished");
             return Err("finished".to_owned());
         } else {
+            if filepath_exists {
+                // remove the preexisting tmp file
+                remove_file(self.filepath.as_path()).expect(&format!("Failed to remove pre-existing .tmp file: {:?}", self.filepath));
+            }
             if let Err(e) = self.get_url(0, 5) {
                 return Err(e);
             }
@@ -118,7 +128,7 @@ impl Downloader {
 
     pub fn get_url(&mut self, tries: usize, maxtries: usize) -> Result<(), String> {
         if tries >= maxtries {
-            return Err("Over try limit".to_owned());
+            return Err(format!("Over connection try limit of {}.", maxtries));
         } else {
             if let None = self.stream {
                 match self.client.get(&self.url).send() {
@@ -131,8 +141,6 @@ impl Downloader {
                             if ioerr.kind() == ErrorKind::WouldBlock {
                                 return self.get_url(tries, maxtries);
                             } else {
-                                println!("{:?}", ioerr.kind());
-                                println!("geterror");
                                 return self.get_url(tries + 1, maxtries);
                             }
                         } else {
@@ -193,15 +201,20 @@ impl Downloader {
                     Err(e) => {
                         // Some error
                         if e.kind() != ErrorKind::WouldBlock {
-                            //println!("Error Type: {:?}", e.kind());
-                            //println!("Name: {}", self.name);
-                            //println!("Url: {}", self.url);
-                            //println!("Error: {:?}", e.into_inner());
-                            return Err(format!("Error: {:?} - {:?}", e.kind(), e.into_inner()));
+                            let kind = e.kind();
+                            let error = e.into_inner().unwrap();
+                            if "StringError(\"early eof\")" == &format!("{}", error) {
+                                return Err(format!("Error: \n{:?} - {:?}", kind, "connection dropped - try redownloading the file."));
+                            } else {
+                                return Err(format!("Error: \n{:?} - {:?}", kind, error));
+                            }
                         }
                     }
                 }
             }
+            sleep(Duration::new(0, 100));
+        } else {
+            sleep(Duration::new(0, 100000));
         }
 
         Ok(())
@@ -223,7 +236,6 @@ impl Downloader {
         } else {
             newpath = newdir.join(current_filename);
         }
-        println!("newpath: {:?}", newpath);
         self.change_path(&newpath);
     }
 

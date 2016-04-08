@@ -81,7 +81,9 @@ pub fn name_to_fname(s: &str) -> String {
 }
 
 pub fn name_to_dname(s: &str) -> String {
-    spaces_to_underscores(&remove_leading_spaces(s))
+    let s = spaces_to_underscores(&remove_leading_spaces(s));
+    let first_non_period = s.find(char::is_not_period).unwrap();
+    return s[first_non_period..s.len()].to_owned();
 }
 
 fn spaces_to_underscores(s: &str) -> String {
@@ -93,12 +95,16 @@ fn remove_leading_spaces(s: &str) -> String {
     return s[first_non_whitespace..s.len()].to_owned();
 }
 
-trait NotWhitespace {
+trait NotChar {
     fn is_not_whitespace(self) -> bool;
+    fn is_not_period(self) -> bool;
 }
 
-impl NotWhitespace for char {
+impl NotChar for char {
     fn is_not_whitespace(self) -> bool {
         !self.is_whitespace()
+    }
+    fn is_not_period(self) -> bool {
+        self != '.'
     }
 }

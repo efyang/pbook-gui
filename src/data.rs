@@ -5,7 +5,7 @@ use time::precise_time_s;
 use time;
 use helper::{minimum, maximum, make_string_if_nonzero};
 use constants::DOWNLOAD_SPEED_UPDATE_TIME;
-use std::{i32, i64};
+use std::i64;
 // refactor TpoolProgressMsg to just be a DownloadUpdate
 pub enum DownloadUpdate {
     Message(String),
@@ -17,6 +17,9 @@ pub enum DownloadUpdate {
 
 pub enum GuiCmdMsg {
     Add(u64, PathBuf),
+    Restart(usize), // usize = index
+    Cancel(usize),
+    Open(usize),
     Remove(u64),
     ChangeDir(PathBuf),
     Stop,
@@ -38,6 +41,7 @@ pub enum GuiChange {
     Remove(usize), // idx
     Add(Download), // download
     Set(usize, Download), // idx, download
+    Open(String),
     Panicked(bool, String), // id -- work on this
 }
 
@@ -81,10 +85,6 @@ impl Category {
     pub fn downloads(&self) -> &[Download] {
         &self.downloads
     }
-
-    // pub fn ids(&self) -> Vec<u64> {
-    // self.downloads.iter().map(|dl| dl.id()).collect::<Vec<u64>>()
-    // }
 
     pub fn get_download_at_idx(&self, idx: usize) -> &Download {
         &self.downloads[idx]
@@ -215,6 +215,14 @@ impl Download {
             download_info.set_finished();
         }    
     }
+
+    pub fn progress(&self) -> Option<usize> {
+        if let Some(ref download_info) = self.download_info {
+            Some(download_info.progress())
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -246,6 +254,10 @@ impl DownloadInfo {
     }
 
     // Getters
+    
+    pub fn progress(&self) -> usize {
+        self.progress
+    }
 
     pub fn total(&self) -> usize {
         self.total
@@ -283,7 +295,7 @@ impl DownloadInfo {
             streta = "N/A".to_owned();
         } else if self.progress >= self.total {
             streta = "Done.".to_owned();
-        } else if maximum(eta, i32::MAX as f32) == eta || speed == 0.0 {
+        } else if maximum(eta, 1000000.0) == eta || speed == 0.0 {
             streta = "∞".to_owned();
         } else {
             let dur = time::Duration::seconds(maximum(minimum(eta as i64, i64::MAX), 0));
